@@ -1,0 +1,41 @@
+﻿@page "/Reviews"
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@inject IReviewService ReviewService
+
+<h1>Reviews</h1>
+
+@if (isLoading)
+{
+    <p>Loading reviews...</p>
+}
+else if (reviewList.Any())
+{
+    <ul>
+        @foreach (var review in reviewList)
+        {
+            <li>
+                <strong>@review.User.FullName</strong> reviewed
+                <strong>@review.Product.ProductName</strong>:
+                <em>"@review.Comment"</em> (Rating: @review.Rating)
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>No reviews found.</p>
+}
+
+@code {
+    private List<Review> reviewList = new(); // Renamed from reviews to reviewList
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList(); // Update to use reviewList
+        isLoading = false;
+    }
+}
+

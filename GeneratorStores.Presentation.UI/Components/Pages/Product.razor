@@ -1,0 +1,170 @@
+﻿@page "/Product"
+@using GeneratorStores.DataAccess.Dtos
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject ICartService CartService
+@inject IReviewService ReviewService
+
+<h1 class="text-center my-4 fw-bold">Our Exclusive Products</h1>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <select class="form-select" @onchange="OnCategorySelected">
+                <option value="">All Categories</option>
+                @foreach (var category in categories)
+                {
+                    <option value="@category.Id">@category.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (filteredProducts.Any())
+    {
+        <div class="row g-4">
+            @foreach (var product in filteredProducts)
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="product-card p-4 shadow-sm">
+                        <div class="product-header">
+                            <h5 class="product-title text-primary">@product.ProductName</h5>
+                            <p class="product-description text-muted">@product.ProductDescription</p>
+                        </div>
+                        <div class="product-body mt-3">
+                            <p class="fw-bold fs-5">Price: <span class="text-success">$@product.Price</span></p>
+                            <p class="text-muted small">Available: @product.AmountOfProduct</p>
+                            <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center" @onclick="() => AddToCart(product)">
+                                <i class="fa fa-cart-plus me-2"></i> Add to Cart
+                            </button>
+                            <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mt-2" @onclick="() => LoadReviewsForProduct(product.Id)">
+                                <i class="fa fa-comments me-2"></i> Show Reviews
+                            </button>
+                            @if (reviewsByProduct.ContainsKey(product.Id))
+                            {
+                                @if (reviewsByProduct[product.Id].Any())
+                                {
+                                    <ul>
+                                        @foreach (var review in reviewsByProduct[product.Id])
+                                        {
+                                            <li>
+                                                <strong>@review.User.FullName</strong>:
+                                                <em>"@review.Comment"</em> 
+                                                <span class="d-flex align-items-center">
+                                                    @for (var i = 0; i < review.Rating; i++)
+                                                    {
+                                                        <i class="fa fa-star text-warning me-1"></i>
+                                                    }
+                                                    @for (var i = review.Rating; i < 5; i++)
+                                                    {
+                                                        <i class="fa fa-star text-muted me-1"></i>
+                                                    }
+                                                </span>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">This product has no reviews yet.</p>
+                                }
+                            }
+                            else if (isLoadingReviews.Contains(product.Id))
+                            {
+                                <p class="text-muted">Loading reviews...</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-center text-muted">No products found.</p>
+    }
+</div>
+
+@code {
+    private List<CategoryWithProductsDto> categories = new();
+    private List<DataAccess.Entities.Product> products = new();
+    private List<DataAccess.Entities.Product> filteredProducts = new();
+    private Dictionary<int, List<Review>> reviewsByProduct = new();
+    private HashSet<int> isLoadingReviews = new(); // To track loading state for reviews
+    private bool isLoading = true;
+    private int selectedCategoryId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        await LoadCategoriesAsync();
+        await LoadProductsAsync();
+        filteredProducts = products; // Show all products by default
+        isLoading = false;
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        categories = (await CategoryService.GetCategoriesWithProductsAsync()).ToList();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        products = (await ProductService.GetAllProductsAsync()).ToList();
+    }
+
+    private async Task AddToCart(GeneratorStores.DataAccess.Entities.Product product)
+    {
+        await CartService.AddToCart(product);
+        await JSRuntime.InvokeVoidAsync("alert", $"{product.ProductName} added to cart!");
+    }
+
+    private async Task LoadReviewsForProduct(int productId)
+    {
+        if (!reviewsByProduct.ContainsKey(productId))
+        {
+            isLoadingReviews.Add(productId);
+
+            var reviews = await ReviewService.GetReviewsByProductIdAsync(productId);
+            reviewsByProduct[productId] = reviews.ToList();
+
+            // If no reviews are returned, ensure the product still has an empty list
+            if (!reviewsByProduct[productId].Any())
+            {
+                reviewsByProduct[productId] = new List<Review>();
+            }
+
+            isLoadingReviews.Remove(productId);
+        }
+    }
+
+    private void OnCategorySelected(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value?.ToString();
+        if (string.IsNullOrEmpty(selectedValue))
+        {
+            filteredProducts = products; // Show all products if "All Categories" is selected
+        }
+        else
+        {
+            selectedCategoryId = int.Parse(selectedValue);
+            var selectedCategory = categories.FirstOrDefault(c => c.Id == selectedCategoryId);
+            if (selectedCategory != null)
+            {
+                filteredProducts = products.Where(p => selectedCategory.Products.Any(cp => cp.Id == p.Id)).ToList();
+            }
+        }
+    }
+}

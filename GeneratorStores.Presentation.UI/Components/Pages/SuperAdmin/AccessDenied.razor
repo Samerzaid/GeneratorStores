@@ -1,0 +1,11 @@
+﻿@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.Presentation.UI.Data
+@using Microsoft.AspNetCore.Identity
+@using global::GeneratorStores.Presentation.UI.Data
+
+@inject UserManager<ApplicationUser> _userManager
+@inject RoleManager<IdentityRole> _roleManager
+
+
+<h3>Access Denied</h3>
+<p>You do not have permission to view this page.</p>

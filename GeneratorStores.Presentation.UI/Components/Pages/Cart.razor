@@ -1,0 +1,96 @@
+﻿@page "/Cart"
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@using Microsoft.AspNetCore.Identity
+@rendermode InteractiveServer
+@inject ICartService CartService
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+
+<h1 class="text-center my-4 fw-bold">🛒 Your Cart</h1>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading cart...</span>
+            </div>
+        </div>
+    }
+    else if (cartItems.Any())
+    {
+        <div class="row g-4">
+            @foreach (var product in cartItems)
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@product.ProductName</h5>
+                            <p class="card-text text-muted">@product.ProductDescription</p>
+                            <p class="fw-bold">Price: $@product.Price</p>
+                            <button class="btn btn-danger btn-sm w-100" @onclick="() => RemoveFromCart(product.Id)">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="text-center mt-4">
+            <h4 class="fw-bold">Total: $@cartItems.Sum(p => p.Price)</h4>
+            <button class="btn btn-success btn-lg mt-3" @onclick="ProceedToCheckout">
+                <i class="fas fa-check-circle"></i> Checkout
+            </button>
+            <button class="btn btn-outline-danger btn-lg mt-3 ms-2" @onclick="ClearCart">
+                <i class="fas fa-trash-alt"></i> Clear Cart
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted">
+            <p><i class="fas fa-shopping-cart fa-3x"></i></p>
+            <p>Your cart is empty.</p>
+            <a class="btn btn-primary" href="/Product">Continue Shopping</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<DataAccess.Entities.Product> cartItems = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCart();
+    }
+
+    private async Task LoadCart()
+    {
+        isLoading = true;
+        cartItems = (await CartService.GetCartItems()).ToList();
+        isLoading = false;
+    }
+
+    private async Task RemoveFromCart(int productId)
+    {
+        await CartService.RemoveFromCart(productId);
+        await LoadCart();
+    }
+
+    private async Task ClearCart()
+    {
+        await CartService.ClearCart();
+        await LoadCart();
+    }
+
+    private async Task ProceedToCheckout()
+    {
+        // Redirect to the Checkout page with the cart items
+        var cartProductIds = cartItems.Select(p => p.Id).ToList();
+        var queryString = string.Join("&", cartProductIds.Select(id => $"productIds={id}"));
+        NavigationManager.NavigateTo($"/Checkout?{queryString}");
+    }
+}

@@ -1,0 +1,87 @@
+﻿@page "/Checkout"
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@inject ICartService CartService
+@inject IOrderService OrderService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+
+<h1 class="text-center my-4">Checkout</h1>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading products...</span>
+            </div>
+        </div>
+    }
+    else if (products.Any())
+    {
+        <div class="row g-4">
+            @foreach (var product in products)
+            {
+                <div class="col-lg-4 col-md-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">@product.ProductName</h5>
+                            <p class="card-text text-muted">@product.ProductDescription</p>
+                            <p class="fw-bold">Price: $@product.Price</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="text-center mt-4">
+            <h4 class="fw-bold">Total: $@products.Sum(p => p.Price)</h4>
+            <button class="btn btn-success btn-lg mt-3" @onclick="PlaceOrder">
+                <i class="fas fa-check-circle"></i> Place Order
+            </button>
+        </div>
+    }
+    else
+    {
+        <p class="text-center text-muted">No products found for checkout.</p>
+    }
+</div>
+
+@code {
+    private List<DataAccess.Entities.Product> products = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+
+        var uri = NavigationManager.Uri;
+        var query = new Uri(uri).Query;
+        var productIds = System.Web.HttpUtility.ParseQueryString(query).GetValues("productIds")
+            ?.Select(int.Parse).ToList();
+
+        if (productIds != null && productIds.Any())
+        {
+            // Fetch products from cart or service by IDs
+            var allCartItems = (await CartService.GetCartItems()).ToList();
+            products = allCartItems.Where(p => productIds.Contains(p.Id)).ToList();
+        }
+
+        isLoading = false;
+    }
+
+    private async Task PlaceOrder()
+    {
+        await OrderService.PlaceOrderAsync(products);
+
+        await JSRuntime.InvokeVoidAsync("alert", "Your order has been placed successfully!");
+        NavigationManager.NavigateTo("/"); // Redirect to homepage after order placement
+    }
+}
+y

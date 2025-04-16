@@ -1,0 +1,143 @@
+﻿@page "/ManageRoles"
+
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.Presentation.UI.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using global::GeneratorStores.Presentation.UI.Data
+
+
+@rendermode InteractiveServer
+
+@inject UserManager<ApplicationUser> _userManager
+@inject RoleManager<IdentityRole> _roleManager
+@inject NavigationManager NavigationManager
+
+@code {
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    private IList<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
+    private IList<string> Roles { get; set; } = new List<string>();
+    private Dictionary<string, List<string>> UserRoles { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthenticationState).User;
+        if (!user.IsInRole("SuperAdmin"))
+        {
+            NavigationManager.NavigateTo("/access-denied");
+            return;
+        }
+
+        // Get all users
+        Users = await _userManager.Users.ToListAsync();
+
+        // Only include 'SuperAdmin' and 'Admin' roles for management
+        Roles = await _roleManager.Roles
+            .Where(r => r.Name == "SuperAdmin" || r.Name == "Admin")
+            .Select(r => r.Name)
+            .ToListAsync();
+
+        // Initialize the user-role mapping
+        foreach (var userItem in Users)
+        {
+            var roles = await _userManager.GetRolesAsync(userItem);
+            UserRoles[userItem.Id] = roles.ToList();
+        }
+    }
+
+    private async Task AddRoleAsync(string userId, string role)
+    {
+        // Only allow adding 'SuperAdmin' or 'Admin' roles
+        if (role != "SuperAdmin" && role != "Admin")
+            return;
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user != null && await _roleManager.RoleExistsAsync(role))
+        {
+            await _userManager.AddToRoleAsync(user, role);
+
+            // Update the UserRoles dictionary
+            if (!UserRoles.ContainsKey(userId))
+                UserRoles[userId] = new List<string>();
+
+            if (!UserRoles[userId].Contains(role))
+                UserRoles[userId].Add(role);
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveRoleAsync(string userId, string role)
+    {
+        // Only allow removing 'SuperAdmin' or 'Admin' roles
+        if (role != "SuperAdmin" && role != "Admin")
+            return;
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user != null && await _roleManager.RoleExistsAsync(role))
+        {
+            await _userManager.RemoveFromRoleAsync(user, role);
+
+            // Update the UserRoles dictionary
+            if (UserRoles.ContainsKey(userId) && UserRoles[userId].Contains(role))
+            {
+                UserRoles[userId].Remove(role);
+            }
+
+            StateHasChanged();
+        }
+    }
+}
+
+<h3>Manage Users and Roles</h3>
+
+@if (Users == null || !Users.Any())
+{
+    <p>No users found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Roles</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Users)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>
+                        @if (UserRoles.ContainsKey(user.Id))
+                        {
+                            @foreach (var role in UserRoles[user.Id])
+                            {
+                                <span class="badge bg-primary">@role</span>
+                            }
+                        }
+                    </td>
+                    <td>
+                        @foreach (var role in Roles)
+                        {
+                            @if (UserRoles.ContainsKey(user.Id) && UserRoles[user.Id].Contains(role))
+                            {
+                                <button class="btn btn-danger btn-sm" @onclick="async () => await RemoveRoleAsync(user.Id, role)">Remove @role</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success btn-sm" @onclick="async () => await AddRoleAsync(user.Id, role)">Add @role</button>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

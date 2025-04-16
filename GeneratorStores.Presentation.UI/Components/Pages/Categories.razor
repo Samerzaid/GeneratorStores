@@ -1,0 +1,128 @@
+﻿@page "/Categories"
+@using GeneratorStores.DataAccess.Dtos
+@using GeneratorStores.DataAccess.Services
+@rendermode InteractiveServer
+@inject ICategoryService CategoryService
+@inject IProductService ProductService
+
+<h1>Categories and Their Products</h1>
+
+@if (isLoading)
+{
+    <p>Loading categories...</p>
+}
+else if (categories.Any())
+{
+    <div class="accordion" id="categoryAccordion">
+        @foreach (var category in categories)
+        {
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-@category.Id">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@category.Id" aria-expanded="false" aria-controls="collapse-@category.Id">
+                        @category.Name
+                    </button>
+                </h2>
+                <div id="collapse-@category.Id" class="accordion-collapse collapse" aria-labelledby="heading-@category.Id" data-bs-parent="#categoryAccordion">
+                    <div class="accordion-body">
+                        @if (category.Products.Any())
+                        {
+                            <ul>
+                                @foreach (var product in category.Products)
+                                {
+                                    <li>
+                                        <strong>@product.ProductName</strong> - Price: $@product.Price
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p>No products available in this category.</p>
+                        }
+                        <button class="btn btn-primary btn-sm mt-3" @onclick="() => OpenAddProductModal(category.Id)">Add Product</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p>No categories found.</p>
+}
+
+<!-- Add Product Modal -->
+@if (isAddProductModalVisible)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Product to Category</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAddProductModal"></button>
+                </div>
+                <div class="modal-body">
+                    <select class="form-select" @bind="selectedProductId">
+                        <option value="">Select a Product</option>
+                        @foreach (var product in products)
+                        {
+                            <option value="@product.Id">@product.ProductName</option>
+                        }
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddProductModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="AddProductToCategory">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CategoryWithProductsDto> categories = new();
+    private List<DataAccess.Entities.Product> products = new();
+    private bool isLoading = true;
+    private bool isAddProductModalVisible = false;
+    private int selectedCategoryId;
+    private int selectedProductId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        categories = (await CategoryService.GetCategoriesWithProductsAsync()).ToList();
+        products = (await ProductService.GetAllProductsAsync()).ToList();
+        isLoading = false;
+    }
+
+    private void OpenAddProductModal(int categoryId)
+    {
+        selectedCategoryId = categoryId;
+        isAddProductModalVisible = true;
+    }
+
+    private void CloseAddProductModal()
+    {
+        isAddProductModalVisible = false;
+        selectedProductId = 0;
+    }
+
+    private async Task AddProductToCategory()
+    {
+        if (selectedCategoryId > 0 && selectedProductId > 0)
+        {
+            // Create a list of product IDs to send to the service
+            var productIds = new List<int> { selectedProductId };
+
+            // Call the service method with the category ID and product IDs
+            await CategoryService.AddProductsToCategoryAsync(selectedCategoryId, productIds);
+
+            // Refresh the category list to reflect changes
+            categories = (await CategoryService.GetCategoriesWithProductsAsync()).ToList();
+
+            // Close the modal after adding the product
+            CloseAddProductModal();
+        }
+    }
+
+}
