@@ -1,41 +1,172 @@
-﻿@page "/Reviews"
+﻿@page "/Admin/Reviews"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+@inject IProductService ProductService
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthProvider
 @using GeneratorStores.DataAccess.Entities
 @using GeneratorStores.DataAccess.Services
+@using GeneratorStores.Presentation.UI.Components.Layout
+@using Microsoft.AspNetCore.Authorization
 @inject IReviewService ReviewService
 
-<h1>Reviews</h1>
 
-@if (isLoading)
-{
-    <p>Loading reviews...</p>
-}
-else if (reviewList.Any())
-{
-    <ul>
-        @foreach (var review in reviewList)
-        {
-            <li>
-                <strong>@review.User.FullName</strong> reviewed
-                <strong>@review.Product.ProductName</strong>:
-                <em>"@review.Comment"</em> (Rating: @review.Rating)
-            </li>
-        }
-    </ul>
-}
-else
-{
-    <p>No reviews found.</p>
-}
+<h1 class="text-center my-4 fw-bold">
+    <i class="fas fa-star-half-alt text-warning"></i> Product Reviews
+</h1>
+
+<div class="container">
+
+    <!-- Add Review Form -->
+    <div class="card mb-5 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add a Review</h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="newReview" OnSubmit="HandleSubmitWithUserId" FormName="AddReview">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Select Product</label>
+                    <select class="form-select" @bind="newReview.ProductId">
+                        <option value="">-- Select a product --</option>
+                        @foreach (var product in allProducts)
+                        {
+                            <option value="@product.Id">@product.ProductName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Comment</label>
+                    <InputTextArea class="form-control" @bind-Value="newReview.Comment" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Rating (1–5)</label>
+                    <InputNumber @bind-Value="newReview.Rating" class="form-control w-25" TValue="int" />
+                </div>
+
+                <button class="btn btn-success" type="submit">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Review
+                </button>
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- Review List -->
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading reviews...</span>
+            </div>
+        </div>
+    }
+    else if (reviewList.Any())
+    {
+        <div class="row g-4">
+            @foreach (var review in reviewList)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex flex-column justify-content-between">
+                            <div class="mb-2">
+                                <h5 class="card-title text-primary">
+                                    <i class="fas fa-user-circle me-2"></i>@review.User?.FullName
+                                </h5>
+                                <p class="card-subtitle text-muted">
+                                    <i class="fas fa-box me-1"></i> @review.Product?.ProductName
+                                </p>
+                            </div>
+
+                            <p class="card-text my-2">
+                                <i class="fas fa-comment-dots me-2 text-secondary"></i>
+                                <em>"@review.Comment"</em>
+                            </p>
+
+                            <div class="mt-2">
+                                <span class="text-warning">
+                                    @for (int i = 0; i < review.Rating; i++)
+                                    {
+                                        <i class="fas fa-star"></i>
+                                    }
+                                    @for (int i = review.Rating; i < 5; i++)
+                                    {
+                                        <i class="far fa-star"></i>
+                                    }
+                                </span>
+                                <span class="text-muted ms-2">@review.CreatedAt.ToShortDateString()</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted">
+            <i class="fas fa-comment-slash fa-3x mb-3"></i>
+            <p>No reviews found.</p>
+        </div>
+    }
+</div>
 
 @code {
-    private List<Review> reviewList = new(); // Renamed from reviews to reviewList
+    private List<Review> reviewList = new();
+    private List<DataAccess.Entities.Product> allProducts = new();
     private bool isLoading = true;
+
+    private Review newReview = new();
+    private string userId;
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
-        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList(); // Update to use reviewList
+
+        // Load reviews and products
+        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
+        allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+
+        // Get logged-in user ID
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
+
         isLoading = false;
     }
+
+    private async Task HandleAddReview()
+    {
+        if (string.IsNullOrWhiteSpace(userId) || newReview.ProductId == 0 || newReview.Rating < 1 || newReview.Rating > 5)
+            return;
+
+        newReview.UserId = userId;
+        newReview.CreatedAt = DateTime.UtcNow;
+
+        await ReviewService.AddReviewAsync(newReview);
+
+        // Refresh list
+        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
+        newReview = new Review(); // Reset form
+    }
+
+    private async Task HandleSubmitWithUserId(EditContext context)
+    {
+        // Set the logged-in user's ID before validation
+        newReview.UserId = userId;
+
+        // Revalidate after setting UserId
+        if (!context.Validate())
+            return;
+
+        await ReviewService.AddReviewAsync(newReview);
+        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
+        newReview = new Review(); // reset
+    }
+
 }
 

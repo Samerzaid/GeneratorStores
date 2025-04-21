@@ -3,58 +3,74 @@
 
 <PageTitle>Home</PageTitle>
 
-<div class="hero-section">
-    <div class="container text-center text-white">
-        <h1 class="display-4 fw-bold">Welcome to GeneratorStores</h1>
-        <p class="lead mt-3">Your one-stop shop for all your product needs. Explore, discover, and shop now!</p>
-        <div class="mt-4">
-            <a href="Product" class="btn btn-primary btn-lg me-2"><i class="bi bi-box-seam"></i> Shop Products</a>
-            <a href="Account/Login" class="btn btn-outline-light btn-lg"><i class="bi bi-person-circle"></i> Get Started</a>
+<!-- Hero Section -->
+<section class="hero-section d-flex align-items-center text-white text-center" style="background: linear-gradient(rgba(0,0,0,.6), rgba(0,0,0,.6)), url('images/hero-bg.jpg') center/cover no-repeat; height: 90vh;">
+    <div class="container">
+        <h1 class="display-3 fw-bold mb-3 animate__animated animate__fadeInDown">Welcome to GeneratorStores</h1>
+        <p class="lead mb-4 animate__animated animate__fadeInUp">Your one-stop shop for all your product needs. Explore, discover, and shop now!</p>
+        <div class="d-flex justify-content-center gap-3 animate__animated animate__fadeInUp">
+            <a href="Products" class="btn btn-primary btn-lg shadow-sm"><i class="bi bi-box-seam me-2"></i> Shop Products</a>
+            <a href="Account/Login" class="btn btn-outline-light btn-lg"><i class="bi bi-person-circle me-2"></i> Get Started</a>
         </div>
     </div>
-</div>
+</section>
 
-<div class="features-section py-5">
+<!-- Features Section -->
+<section class="features-section py-5 bg-light">
     <div class="container">
-        <div class="row text-center">
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
+        <div class="row text-center g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm rounded-4">
                     <div class="card-body">
-                        <i class="bi bi-truck fs-1 text-primary"></i>
-                        <h5 class="mt-3">Fast Delivery</h5>
+                        <i class="bi bi-truck fs-1 text-primary mb-3"></i>
+                        <h5 class="fw-semibold">Fast Delivery</h5>
                         <p class="text-muted">Get your products delivered to your doorstep in no time.</p>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
+            <div class="col-lg-4 col-md-6">
+                <div class="card h-100 border-0 shadow-sm rounded-4">
                     <div class="card-body">
-                        <i class="bi bi-star-fill fs-1 text-warning"></i>
-                        <h5 class="mt-3">Top Quality</h5>
+                        <i class="bi bi-star-fill fs-1 text-warning mb-3"></i>
+                        <h5 class="fw-semibold">Top Quality</h5>
                         <p class="text-muted">We ensure the best quality products for our customers.</p>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
+            <div class="col-lg-4 col-md-6 mx-auto">
+                <div class="card h-100 border-0 shadow-sm rounded-4">
                     <div class="card-body">
-                        <i class="bi bi-shield-lock-fill fs-1 text-success"></i>
-                        <h5 class="mt-3">Secure Payment</h5>
+                        <i class="bi bi-shield-lock-fill fs-1 text-success mb-3"></i>
+                        <h5 class="fw-semibold">Secure Payment</h5>
                         <p class="text-muted">Your transactions are safe and secure with us.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="footer-section bg-dark text-white py-4">
-    <div class="container text-center">
-        <p class="mb-0">© 2025 GeneratorStores. All rights reserved.</p>
-        <div class="social-icons mt-2">
-            <a href="#" class="text-white me-3"><i class="bi bi-facebook"></i></a>
-            <a href="#" class="text-white me-3"><i class="bi bi-twitter"></i></a>
-            <a href="#" class="text-white"><i class="bi bi-instagram"></i></a>
-        </div>
-    </div>
-</div>
+
+
+<style>
+    .hero-section {
+        height: 90vh;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        position: relative;
+        z-index: 1;
+    }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: -1;
+        }
+
+</style>

@@ -1,4 +1,4 @@
-﻿@page "/Product"
+﻿@page "/Products"
 @using GeneratorStores.DataAccess.Dtos
 @using GeneratorStores.DataAccess.Entities
 @using GeneratorStores.DataAccess.Services
@@ -12,7 +12,7 @@
 <h1 class="text-center my-4 fw-bold">Our Exclusive Products</h1>
 
 <div class="container">
-    <div class="row mb-4">
+    <div class="row mb-4 align-items-center">
         <div class="col-md-4">
             <select class="form-select" @onchange="OnCategorySelected">
                 <option value="">All Categories</option>
@@ -21,6 +21,15 @@
                     <option value="@category.Id">@category.Name</option>
                 }
             </select>
+        </div>
+        <div class="col-md-8 text-end">
+            <span class="me-2">View</span>
+            <button class="btn btn-sm me-2 @(isGridView ? "btn-dark" : "btn-outline-dark")" @onclick="() => ToggleView(true)">
+                <i class="fas fa-th"></i>
+            </button>
+            <button class="btn btn-sm @(isGridView ? "btn-outline-dark" : "btn-dark")" @onclick="() => ToggleView(false)">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </div>
 
@@ -34,34 +43,63 @@
     }
     else if (filteredProducts.Any())
     {
-        <div class="row g-4">
-            @foreach (var product in filteredProducts)
-            {
-                <div class="col-lg-4 col-md-6">
-                    <div class="product-card p-4 shadow-sm">
-                        <div class="product-header">
-                            <h5 class="product-title text-primary">@product.ProductName</h5>
-                            <p class="product-description text-muted">@product.ProductDescription</p>
-                        </div>
-                        <div class="product-body mt-3">
-                            <p class="fw-bold fs-5">Price: <span class="text-success">$@product.Price</span></p>
+        @if (isGridView)
+        {
+            <div class="row g-4">
+                @foreach (var product in filteredProducts)
+                {
+                    <div class="col-lg-4 col-md-6">
+                        <div class="product-card p-4 shadow-sm rounded-4 border position-relative h-100 d-flex flex-column justify-content-between">
+
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 rounded-end">
+                                    -@product.Discount.Value% OFF
+                                </span>
+                            }
+
+                            <div class="text-center mb-3">
+                                <img src="images/@product.ImageName" alt="@product.ProductName" class="img-fluid rounded" style="max-height: 200px; object-fit: contain;" />
+                            </div>
+
+                            <div class="product-header">
+                                <h5 class="product-title text-primary">@product.ProductName</h5>
+                                <p class="product-description text-muted">@product.ProductDescription</p>
+                            </div>
+
+                            <p class="fw-bold fs-5">
+                                Price:
+                                @if (product.Discount.HasValue && product.Discount > 0)
+                                {
+                                    <span class="text-danger me-2 text-decoration-line-through">$@product.Price.ToString("0.00")</span>
+                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                }
+                            </p>
+
                             <p class="text-muted small">Available: @product.AmountOfProduct</p>
+
                             <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center" @onclick="() => AddToCart(product)">
                                 <i class="fa fa-cart-plus me-2"></i> Add to Cart
                             </button>
-                            <button class="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center mt-2" @onclick="() => LoadReviewsForProduct(product.Id)">
+
+                            <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center mt-2" @onclick="() => LoadReviewsForProduct(product.Id)">
                                 <i class="fa fa-comments me-2"></i> Show Reviews
                             </button>
+
                             @if (reviewsByProduct.ContainsKey(product.Id))
                             {
                                 @if (reviewsByProduct[product.Id].Any())
                                 {
-                                    <ul>
+                                    <ul class="mt-2">
                                         @foreach (var review in reviewsByProduct[product.Id])
                                         {
                                             <li>
                                                 <strong>@review.User.FullName</strong>:
-                                                <em>"@review.Comment"</em> 
+                                                <em>"@review.Comment"</em>
                                                 <span class="d-flex align-items-center">
                                                     @for (var i = 0; i < review.Rating; i++)
                                                     {
@@ -78,18 +116,87 @@
                                 }
                                 else
                                 {
-                                    <p class="text-muted">This product has no reviews yet.</p>
+                                    <p class="text-muted mt-2">This product has no reviews yet.</p>
                                 }
                             }
                             else if (isLoadingReviews.Contains(product.Id))
                             {
-                                <p class="text-muted">Loading reviews...</p>
+                                <p class="text-muted mt-2">Loading reviews...</p>
                             }
                         </div>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var product in filteredProducts)
+                {
+                    <div class="list-group-item mb-3 border rounded p-3 d-flex">
+                        <img src="images/@product.ImageName" class="img-thumbnail me-3" style="width: 150px; object-fit: contain;" />
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">@product.ProductName</h5>
+                            <p class="mb-1 text-muted">@product.ProductDescription</p>
+                            <p class="fw-bold">
+                                @if (product.Discount.HasValue && product.Discount > 0)
+                                {
+                                    <span class="text-danger me-2 text-decoration-line-through">$@product.Price.ToString("0.00")</span>
+                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                }
+                            </p>
+                            <p class="text-muted small">Available: @product.AmountOfProduct</p>
+                            <div class="d-flex gap-2 mt-2">
+                                <button class="btn btn-sm btn-outline-primary modern-btn flex-grow-1" @onclick="() => AddToCart(product)">
+                                    <i class="fa fa-cart-plus me-1"></i> Add to Cart
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary modern-btn flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
+                                    <i class="fa fa-comments me-1"></i> Reviews
+                                </button>
+                            </div>
+
+                            @if (reviewsByProduct.ContainsKey(product.Id))
+                            {
+                                @if (reviewsByProduct[product.Id].Any())
+                                {
+                                    <ul class="mt-2">
+                                        @foreach (var review in reviewsByProduct[product.Id])
+                                        {
+                                            <li>
+                                                <strong>@review.User.FullName</strong>:
+                                                <em>"@review.Comment"</em>
+                                                <span class="d-flex align-items-center">
+                                                    @for (var i = 0; i < review.Rating; i++)
+                                                    {
+                                                        <i class="fa fa-star text-warning me-1"></i>
+                                                    }
+                                                    @for (var i = review.Rating; i < 5; i++)
+                                                    {
+                                                        <i class="fa fa-star text-muted me-1"></i>
+                                                    }
+                                                </span>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mt-2">This product has no reviews yet.</p>
+                                }
+                            }
+                            else if (isLoadingReviews.Contains(product.Id))
+                            {
+                                <p class="text-muted mt-2">Loading reviews...</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
     }
     else
     {
@@ -102,16 +209,17 @@
     private List<DataAccess.Entities.Product> products = new();
     private List<DataAccess.Entities.Product> filteredProducts = new();
     private Dictionary<int, List<Review>> reviewsByProduct = new();
-    private HashSet<int> isLoadingReviews = new(); // To track loading state for reviews
+    private HashSet<int> isLoadingReviews = new();
     private bool isLoading = true;
     private int selectedCategoryId;
+    private bool isGridView = true;
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
         await LoadCategoriesAsync();
         await LoadProductsAsync();
-        filteredProducts = products; // Show all products by default
+        filteredProducts = products;
         isLoading = false;
     }
 
@@ -125,11 +233,11 @@
         products = (await ProductService.GetAllProductsAsync()).ToList();
     }
 
-    private async Task AddToCart(GeneratorStores.DataAccess.Entities.Product product)
+    private async Task AddToCart(DataAccess.Entities.Product product)
     {
         await CartService.AddToCart(product);
-        await JSRuntime.InvokeVoidAsync("alert", $"{product.ProductName} added to cart!");
     }
+
 
     private async Task LoadReviewsForProduct(int productId)
     {
@@ -140,7 +248,6 @@
             var reviews = await ReviewService.GetReviewsByProductIdAsync(productId);
             reviewsByProduct[productId] = reviews.ToList();
 
-            // If no reviews are returned, ensure the product still has an empty list
             if (!reviewsByProduct[productId].Any())
             {
                 reviewsByProduct[productId] = new List<Review>();
@@ -155,7 +262,7 @@
         var selectedValue = e.Value?.ToString();
         if (string.IsNullOrEmpty(selectedValue))
         {
-            filteredProducts = products; // Show all products if "All Categories" is selected
+            filteredProducts = products;
         }
         else
         {
@@ -167,4 +274,68 @@
             }
         }
     }
+
+    private void ToggleView(bool grid)
+    {
+        isGridView = grid;
+    }
 }
+
+<style>
+    .product-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .product-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .product-description {
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .btn-sm {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .btn-dark i, .btn-outline-dark i {
+        pointer-events: none;
+    }
+
+    .list-group-item img {
+        border-radius: 0.5rem;
+    }
+
+    .list-group-item {
+        background-color: #fff;
+    }
+
+        .list-group-item h5 {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+    .modern-btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.4rem;
+        transition: all 0.2s ease-in-out;
+        text-wrap: nowrap;
+    }
+
+        .modern-btn:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transform: translateY(-1px);
+        }
+
+
+</style>

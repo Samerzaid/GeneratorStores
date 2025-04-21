@@ -1,5 +1,10 @@
-﻿@page "/Admin/Product"
+﻿@page "/Admin/Products"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
 @using GeneratorStores.DataAccess.Services
+@using GeneratorStores.Presentation.UI.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 @inject IProductService ProductService
@@ -39,7 +44,15 @@
                             <h5 class="card-title text-primary">@product.ProductName</h5>
                             <p class="card-text text-muted">@product.ProductDescription</p>
                             <p class="fw-bold text-success">Price: $@product.Price</p>
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <p class="text-danger">Discount: @product.Discount.Value%</p>
+                            }
                             <p class="text-secondary">Stock: @product.AmountOfProduct</p>
+                            @if (!string.IsNullOrEmpty(product.ImageName))
+                            {
+                                <img src="images/@product.ImageName" alt="Product Image" class="img-fluid rounded mt-2" style="max-height: 150px; object-fit: contain;" />
+                            }
                         </div>
                         <div class="card-footer bg-white border-0 d-flex justify-content-between">
                             <button class="btn btn-outline-primary btn-sm" @onclick="() => ShowEditForm(product)">
@@ -87,6 +100,29 @@
                                 <label class="form-label">Amount</label>
                                 <InputNumber class="form-control" @bind-Value="currentProduct.AmountOfProduct" />
                             </div>
+
+                            <!-- Image Upload -->
+                            <div class="mb-3">
+                                <label class="form-label">Upload Product Image</label>
+                                <InputFile OnChange="OnImageSelected" class="form-control" />
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(currentProduct.ImageName))
+                            {
+                                <div class="text-center mb-3">
+                                    <img src="images/@currentProduct.ImageName" alt="Preview" class="img-thumbnail" style="max-height: 150px;" />
+                                </div>
+                            }
+
+                            <!-- Discount -->
+                            <div class="mb-3">
+                                <label class="form-label">Discount (%)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-percent"></i></span>
+                                    <InputNumber class="form-control" @bind-Value="currentProduct.Discount" placeholder="e.g. 10" />
+                                </div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="fas fa-save"></i> Save
                             </button>
@@ -138,7 +174,16 @@
     private void ShowEditForm(DataAccess.Entities.Product product)
     {
         modalTitle = "Edit Product";
-        currentProduct = product;
+        currentProduct = new DataAccess.Entities.Product
+            {
+                Id = product.Id,
+                ProductName = product.ProductName,
+                ProductDescription = product.ProductDescription,
+                Price = product.Price,
+                AmountOfProduct = product.AmountOfProduct,
+                ImageName = product.ImageName,
+                Discount = product.Discount
+            };
         isFormVisible = true;
     }
 
@@ -175,5 +220,23 @@
     {
         searchTerm = e.Value?.ToString() ?? string.Empty;
         FilterProducts();
+    }
+
+    private async Task OnImageSelected(InputFileChangeEventArgs e)
+    {
+        var imageFile = e.File;
+
+        if (imageFile != null && imageFile.ContentType.StartsWith("image/"))
+        {
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(imageFile.Name)}";
+            var savePath = Path.Combine("wwwroot/images", fileName);
+
+            using (var stream = new FileStream(savePath, FileMode.Create))
+            {
+                await imageFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(stream);
+            }
+
+            currentProduct.ImageName = fileName;
+        }
     }
 }

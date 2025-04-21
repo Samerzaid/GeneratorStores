@@ -1,45 +1,70 @@
-﻿@page "/Categories"
+﻿@page "/Admin/Categories"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
 @using GeneratorStores.DataAccess.Dtos
+@using GeneratorStores.DataAccess.Entities
 @using GeneratorStores.DataAccess.Services
-@rendermode InteractiveServer
+@using GeneratorStores.Presentation.UI.Components.Layout
+@using Microsoft.AspNetCore.Authorization
 @inject ICategoryService CategoryService
 @inject IProductService ProductService
+@rendermode InteractiveServer
 
-<h1>Categories and Their Products</h1>
+
+
+<h2 class="text-center my-5 fw-bold">
+    <i class="bi bi-tags-fill me-2"></i> Category Management
+</h2>
+
+
+<div class="text-end mb-4">
+    <button class="btn btn-primary rounded-pill px-4 py-2 shadow-sm" @onclick="ShowAddCategoryModal">
+        <i class="bi bi-folder-plus me-2"></i> Add Category
+    </button>
+</div>
 
 @if (isLoading)
 {
-    <p>Loading categories...</p>
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 }
 else if (categories.Any())
 {
-    <div class="accordion" id="categoryAccordion">
+    <div class="row row-cols-1 row-cols-md-2 g-4">
         @foreach (var category in categories)
         {
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="heading-@category.Id">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@category.Id" aria-expanded="false" aria-controls="collapse-@category.Id">
-                        @category.Name
-                    </button>
-                </h2>
-                <div id="collapse-@category.Id" class="accordion-collapse collapse" aria-labelledby="heading-@category.Id" data-bs-parent="#categoryAccordion">
-                    <div class="accordion-body">
+            <div class="col">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom rounded-top-4 px-4 py-3">
+                        <h5 class="mb-0 text-dark">
+                            <i class="bi bi-folder-fill me-2 text-warning"></i>@category.Name
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary rounded-pill" @onclick="() => OpenAddProductModal(category.Id)">
+                            <i class="bi bi-plus-circle me-1"></i> Add Product
+                        </button>
+                    </div>
+                    <div class="card-body bg-light-subtle rounded-bottom-4 px-4 py-3">
                         @if (category.Products.Any())
                         {
-                            <ul>
+                            <div class="row row-cols-1 row-cols-sm-2 g-3">
                                 @foreach (var product in category.Products)
                                 {
-                                    <li>
-                                        <strong>@product.ProductName</strong> - Price: $@product.Price
-                                    </li>
+                                    <div class="col">
+                                        <div class="border bg-white rounded-3 px-3 py-2 d-flex justify-content-between align-items-center shadow-sm">
+                                            <div class="fw-semibold">@product.ProductName</div>
+                                            <span class="badge bg-success">$@product.Price.ToString("0.00")</span>
+                                        </div>
+                                    </div>
                                 }
-                            </ul>
+                            </div>
                         }
                         else
                         {
-                            <p>No products available in this category.</p>
+                            <p class="fst-italic text-muted">No products in this category yet.</p>
                         }
-                        <button class="btn btn-primary btn-sm mt-3" @onclick="() => OpenAddProductModal(category.Id)">Add Product</button>
                     </div>
                 </div>
             </div>
@@ -48,36 +73,69 @@ else if (categories.Any())
 }
 else
 {
-    <p>No categories found.</p>
+    <div class="text-center text-muted mt-5">
+        <i class="bi bi-inbox fs-1"></i>
+        <p>No categories found.</p>
+    </div>
 }
 
 <!-- Add Product Modal -->
 @if (isAddProductModalVisible)
 {
-    <div class="modal show d-block" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Add Product to Category</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAddProductModal"></button>
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white rounded-top-4">
+                    <h5 class="modal-title"><i class="bi bi-boxes me-2"></i>Add Product to Category</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddProductModal"></button>
                 </div>
                 <div class="modal-body">
-                    <select class="form-select" @bind="selectedProductId">
-                        <option value="">Select a Product</option>
+                    <select class="form-select form-select-lg rounded-pill" @bind="selectedProductId">
+                        <option value="">Select a product</option>
                         @foreach (var product in products)
                         {
                             <option value="@product.Id">@product.ProductName</option>
                         }
                     </select>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddProductModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="AddProductToCategory">Add</button>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button class="btn btn-outline-secondary" @onclick="CloseAddProductModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="AddProductToCategory">
+                        <i class="bi bi-check-circle me-1"></i> Add
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 }
+
+@if (isAddCategoryModalVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-primary text-white rounded-top-4">
+                    <h5 class="modal-title"><i class="bi bi-folder-plus me-2"></i>Add New Category</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddCategoryModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="newCategory" OnValidSubmit="AddCategory">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Category Name</label>
+                            <InputText class="form-control rounded-pill px-3" @bind-Value="newCategory.Name" />
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3" type="submit">
+                            <i class="bi bi-check-circle me-1"></i> Create
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
 
 @code {
     private List<CategoryWithProductsDto> categories = new();
@@ -86,6 +144,8 @@ else
     private bool isAddProductModalVisible = false;
     private int selectedCategoryId;
     private int selectedProductId;
+    private bool isAddCategoryModalVisible = false;
+    private Category newCategory = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,28 +161,73 @@ else
         isAddProductModalVisible = true;
     }
 
+    private void ShowAddCategoryModal()
+    {
+        newCategory = new Category();
+        isAddCategoryModalVisible = true;
+    }
+
     private void CloseAddProductModal()
     {
         isAddProductModalVisible = false;
         selectedProductId = 0;
     }
+    private void CloseAddCategoryModal()
+    {
+        isAddCategoryModalVisible = false;
+    }
+
 
     private async Task AddProductToCategory()
     {
         if (selectedCategoryId > 0 && selectedProductId > 0)
         {
-            // Create a list of product IDs to send to the service
             var productIds = new List<int> { selectedProductId };
-
-            // Call the service method with the category ID and product IDs
             await CategoryService.AddProductsToCategoryAsync(selectedCategoryId, productIds);
-
-            // Refresh the category list to reflect changes
             categories = (await CategoryService.GetCategoriesWithProductsAsync()).ToList();
-
-            // Close the modal after adding the product
             CloseAddProductModal();
         }
     }
 
+    private async Task AddCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(newCategory.Name))
+        {
+            await CategoryService.AddCategoryAsync(newCategory);
+            categories = (await CategoryService.GetCategoriesWithProductsAsync()).ToList();
+            CloseAddCategoryModal();
+        }
+    }
 }
+
+        
+<style>
+    .bg-light-subtle {
+        background-color: #f8f9fc;
+    }
+
+    .card {
+        transition: all 0.3s ease-in-out;
+    }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+        }
+
+    select.form-select-lg {
+        padding: 0.75rem 1.25rem;
+        font-size: 1.1rem;
+    }
+
+    input::placeholder {
+        font-style: italic;
+    }
+
+    .modal .form-control:focus {
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+
+</style>
+

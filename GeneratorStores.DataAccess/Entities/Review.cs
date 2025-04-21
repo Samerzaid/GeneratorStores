@@ -9,19 +9,20 @@ public class Review : IEntity<int>
     public int Id { get; set; }
 
     [Required]
-    public string UserId { get; set; } // Reference to the user who submitted the review
+    public string UserId { get; set; } 
     public ApplicationUser User { get; set; }
 
     [Required]
-    public int ProductId { get; set; } // Reference to the reviewed product
+    public int ProductId { get; set; } 
     public Product Product { get; set; }
 
     [Required]
     [Range(1, 5)] // Rating range is 1 to 5 stars
     public int Rating { get; set; }
 
-    public string Comment { get; set; } // Optional comment for the review
+    public string Comment { get; set; } 
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // Automatically set creation time
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
 }
+
 

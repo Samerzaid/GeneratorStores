@@ -7,7 +7,6 @@
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
-
 <h1 class="text-center my-4">Checkout</h1>
 
 <div class="container">
@@ -25,18 +24,43 @@
             @foreach (var product in products)
             {
                 <div class="col-lg-4 col-md-6">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
+                    <div class="card h-100 shadow-sm">
+                        <img src="images/@product.ImageName" alt="@product.ProductName"
+                             class="card-img-top p-3" style="height: 200px; object-fit: contain;" />
+
+                        <div class="card-body d-flex flex-column">
                             <h5 class="card-title">@product.ProductName</h5>
                             <p class="card-text text-muted">@product.ProductDescription</p>
-                            <p class="fw-bold">Price: $@product.Price</p>
+
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <p class="fw-bold mb-0">
+                                    Price:
+                                    <span class="text-danger text-decoration-line-through me-2">
+                                        $@product.Price.ToString("0.00")
+                                    </span>
+                                    <span class="text-success">
+                                        $@product.FinalPrice.ToString("0.00")
+                                    </span>
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="fw-bold text-success mb-0">
+                                    Price: $@product.FinalPrice.ToString("0.00")
+                                </p>
+                            }
                         </div>
                     </div>
                 </div>
             }
         </div>
+
         <div class="text-center mt-4">
-            <h4 class="fw-bold">Total: $@products.Sum(p => p.Price)</h4>
+            <h4 class="fw-bold">
+                Total: $@products.Sum(p => p.FinalPrice).ToString("0.00")
+            </h4>
+
             <button class="btn btn-success btn-lg mt-3" @onclick="PlaceOrder">
                 <i class="fas fa-check-circle"></i> Place Order
             </button>
@@ -68,7 +92,6 @@
 
         if (productIds != null && productIds.Any())
         {
-            // Fetch products from cart or service by IDs
             var allCartItems = (await CartService.GetCartItems()).ToList();
             products = allCartItems.Where(p => productIds.Contains(p.Id)).ToList();
         }
@@ -79,9 +102,23 @@
     private async Task PlaceOrder()
     {
         await OrderService.PlaceOrderAsync(products);
-
         await JSRuntime.InvokeVoidAsync("alert", "Your order has been placed successfully!");
-        NavigationManager.NavigateTo("/"); // Redirect to homepage after order placement
+        NavigationManager.NavigateTo("/"); // Redirect to homepage
     }
 }
-y
+
+<style>
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .card-img-top {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+</style>

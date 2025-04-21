@@ -1,0 +1,171 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@inherits LayoutComponentBase
+@attribute [Authorize(Roles = "Admin")]
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<body class="d-flex flex-column min-vh-100">
+
+<!-- Admin Navbar -->
+    <header class="admin-navbar navbar navbar-expand-lg bg-white shadow-sm px-4 py-3 border-bottom sticky-top">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <!-- Logo -->
+            <a class="navbar-brand text-black fw-bold fs-4 d-flex align-items-center gap-2" href="/Admin/Products">
+                <i class="bi bi-gem"></i> Admin
+            </a>
+
+            <!-- Nav links -->
+            <nav class="d-flex gap-3 align-items-center">
+                <NavLink class="nav-item nav-link admin-link" href="/Admin/Products">
+                    <i class="bi bi-box me-1"></i> Products
+                </NavLink>
+                <NavLink class="nav-item nav-link admin-link" href="/Admin/Orders" Match="NavLinkMatch.All">
+                    <i class="bi bi-bag-check me-1"></i> Orders
+                </NavLink>
+                <NavLink class="nav-item nav-link admin-link" href="/Admin/Users">
+                    <i class="bi bi-people me-1"></i> Users
+                </NavLink>
+                <NavLink class="nav-item nav-link admin-link" href="/Admin/Categories">
+                    <i class="bi bi-tags me-1"></i> Categories
+                </NavLink>
+                <NavLink class="nav-item nav-link admin-link" href="/Admin/Reviews">
+                    <i class="bi bi-people me-1"></i> Reviews
+                </NavLink>
+
+            </nav>
+
+            <!-- Logout -->
+            <AuthorizeView>
+                <Authorized Context="auth">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-semibold text-dark">
+                            👋 Hi, @auth.User.Identity?.Name
+                        </span>
+
+                        <form class="d-inline" action="/Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit" class="logout-button d-flex align-items-center gap-2">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </Authorized>
+
+                <NotAuthorized>
+                    <NavLink href="/Account/Login" class="btn btn-outline-primary btn-sm">
+                        Login
+                    </NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+
+
+        </div>
+    </header>
+
+
+<!-- Admin Content Area -->
+<main class="flex-grow-1 p-4 bg-light">
+    @Body
+</main>
+<footer class="footer-section bg-dark text-white pt-4 pb-2 mt-auto">
+    <div class="container text-center">
+        <h5 class="fw-semibold mb-3">Stay Connected</h5>
+        <div class="d-flex justify-content-center gap-4 mb-2">
+            <a href="https://facebook.com" target="_blank" class="text-white fs-5"><i class="bi bi-facebook"></i></a>
+            <a href="https://twitter.com" target="_blank" class="text-white fs-5"><i class="bi bi-twitter"></i></a>
+            <a href="https://instagram.com" target="_blank" class="text-white fs-5"><i class="bi bi-instagram"></i></a>
+            <a href="https://linkedin.com" target="_blank" class="text-white fs-5"><i class="bi bi-linkedin"></i></a>
+        </div>
+        <p class="mb-0 small">&copy; @DateTime.Now.Year GeneratorStores. All rights reserved.</p>
+    </div>
+</footer>
+</body>
+
+@code {
+    private string? currentUrl;
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+}
+            
+<style>
+    .navbar .nav-link {
+        text-transform: uppercase;
+        font-weight: 500;
+    }
+
+        .navbar .nav-link:hover {
+            text-decoration: underline;
+        }
+
+    .admin-navbar {
+        font-family: 'Segoe UI', sans-serif;
+        z-index: 1000;
+    }
+
+    .admin-link {
+        font-weight: 500;
+        color: #333;
+        padding: 6px 10px;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+        .admin-link:hover {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: black;
+        }
+
+        .admin-link.active {
+            background-color: black;
+            color: white !important;
+        }
+
+        .admin-link i {
+            font-size: 1rem;
+        }
+
+    .logout-button {
+        background-color: transparent;
+        border: none;
+        color: #333;
+        font-size: 0.95rem;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+        .logout-button:hover {
+            background-color: #f0f0f0;
+            color: #000;
+            cursor: pointer;
+        }
+
+        .logout-button i {
+            transition: transform 0.2s ease;
+        }
+
+        .logout-button:hover i {
+            transform: translateX(2px);
+        }
+
+    .admin-logo {
+        color: black;
+        font-weight: bold;
+        font-size: 1.5rem;
+        text-decoration: none;
+    }
+
+        .admin-logo:hover {
+            color: #000000cc;
+            text-decoration: none;
+        }
+
+</style>
+

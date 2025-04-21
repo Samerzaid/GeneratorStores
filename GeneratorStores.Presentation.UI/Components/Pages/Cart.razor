@@ -24,12 +24,37 @@
             @foreach (var product in cartItems)
             {
                 <div class="col-lg-4 col-md-6">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
+                    <div class="card h-100 shadow-sm">
+                        <img src="images/@product.ImageName" alt="@product.ProductName"
+                             class="card-img-top p-3" style="height: 200px; object-fit: contain;" />
+
+                        <div class="card-body d-flex flex-column">
                             <h5 class="card-title">@product.ProductName</h5>
                             <p class="card-text text-muted">@product.ProductDescription</p>
-                            <p class="fw-bold">Price: $@product.Price</p>
-                            <button class="btn btn-danger btn-sm w-100" @onclick="() => RemoveFromCart(product.Id)">
+
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <p class="fw-bold mb-2">
+                                    Price:
+                                    <span class="text-danger text-decoration-line-through me-2">
+                                        $@product.Price.ToString("0.00")
+                                    </span>
+                                    <span class="text-success">
+                                        $@product.FinalPrice.ToString("0.00")
+                                    </span>
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="fw-bold mb-2">
+                                    Price:
+                                    <span class="text-success">
+                                        $@product.FinalPrice.ToString("0.00")
+                                    </span>
+                                </p>
+                            }
+
+                            <button class="btn btn-danger btn-sm mt-auto w-100" @onclick="() => RemoveFromCart(product.Id)">
                                 <i class="fas fa-trash"></i> Remove
                             </button>
                         </div>
@@ -39,7 +64,9 @@
         </div>
 
         <div class="text-center mt-4">
-            <h4 class="fw-bold">Total: $@cartItems.Sum(p => p.Price)</h4>
+            <h4 class="fw-bold">
+                Total: $@cartItems.Sum(p => p.FinalPrice).ToString("0.00")
+            </h4>
             <button class="btn btn-success btn-lg mt-3" @onclick="ProceedToCheckout">
                 <i class="fas fa-check-circle"></i> Checkout
             </button>
@@ -53,7 +80,7 @@
         <div class="text-center text-muted">
             <p><i class="fas fa-shopping-cart fa-3x"></i></p>
             <p>Your cart is empty.</p>
-            <a class="btn btn-primary" href="/Product">Continue Shopping</a>
+            <a class="btn btn-primary" href="/Products">Continue Shopping</a>
         </div>
     }
 </div>
@@ -88,9 +115,28 @@
 
     private async Task ProceedToCheckout()
     {
-        // Redirect to the Checkout page with the cart items
         var cartProductIds = cartItems.Select(p => p.Id).ToList();
         var queryString = string.Join("&", cartProductIds.Select(id => $"productIds={id}"));
         NavigationManager.NavigateTo($"/Checkout?{queryString}");
     }
 }
+
+<style>
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .card-img-top {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+    }
+
+    .btn-sm i {
+        font-size: 0.85rem;
+    }
+</style>

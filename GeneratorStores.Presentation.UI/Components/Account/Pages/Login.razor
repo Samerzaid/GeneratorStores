@@ -11,57 +11,46 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Login</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <StatusMessage Message="@errorMessage" />
-            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
-                <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label for="email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </EditForm>
-        </section>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
+<div class="login-wrapper d-flex justify-content-center align-items-center min-vh-100 bg-light">
+    <div class="card login-card shadow-lg border-0 p-4 p-md-5">
+        <h2 class="text-center mb-4 fw-bold">Welcome Back 👋</h2>
+        <StatusMessage Message="@errorMessage" />
+
+        <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" role="alert" />
+
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" placeholder="Email" />
+                <label>Email address</label>
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            </div>
+
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="current-password" placeholder="Password" />
+                <label>Password</label>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            </div>
+
+            <div class="form-check mb-3">
+                <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" id="rememberMeCheck" />
+                <label class="form-check-label" for="rememberMeCheck">Remember me</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Log In</button>
+
+            <div class="mt-4 text-center small">
+                <p><a href="/Account/ForgotPassword">Forgot your password?</a></p>
+                <p>
+                    <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">
+                        Don’t have an account? <strong>Sign up</strong>
+                    </a>
+                </p>
+                <p><a href="/Account/ResendEmailConfirmation">Resend email confirmation</a></p>
+            </div>
+        </EditForm>
     </div>
 </div>
 
@@ -81,21 +70,28 @@
     {
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
     }
 
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+
+            var user = await SignInManager.UserManager.FindByEmailAsync(Input.Email);
+            if (user != null && await SignInManager.UserManager.IsInRoleAsync(user, "Admin"))
+            {
+                NavigationManager.NavigateTo("/Admin/Products"); // Admin homepage
+            }
+            else
+            {
+                NavigationManager.NavigateTo(ReturnUrl ?? "/"); // User homepage or fallback
+            }
         }
+
         else if (result.RequiresTwoFactor)
         {
             RedirectManager.RedirectTo(
@@ -128,3 +124,39 @@
     }
 }
 
+<style>
+    .login-wrapper {
+        background: linear-gradient(to right, #e3f2fd, #f3e5f5);
+        padding: 2rem;
+    }
+
+    .login-card {
+        max-width: 420px;
+        width: 100%;
+        border-radius: 1rem;
+        background-color: #ffffff;
+    }
+
+        .login-card h2 {
+            font-size: 1.8rem;
+        }
+
+    .form-floating > .form-control:focus ~ label {
+        opacity: 0.8;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        transition: all 0.3s ease-in-out;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #004ea1;
+            transform: translateY(-1px);
+        }
+
+</style>
+
+        

@@ -13,7 +13,13 @@ public class Product : IEntity<int>
         public double Price { get; set; }
         public int AmountOfProduct { get; set; }
         public bool State { get; set; }
+        public decimal? Discount { get; set; }
+        public string? ImageName { get; set; }
 
+        [JsonIgnore]
+        public double FinalPrice => Discount.HasValue
+            ? Price - (Price * (double)(Discount.Value / 100))
+            : Price;
 
 }
 

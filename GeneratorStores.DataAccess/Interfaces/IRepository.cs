@@ -9,3 +9,4 @@ public interface IRepository<TEntity, TId> where TEntity : IEntity<TId>
     Task DeleteAsync(TId id);
 }
 
+

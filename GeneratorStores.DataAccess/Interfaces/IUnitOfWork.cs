@@ -9,8 +9,11 @@ public interface IUnitOfWork : IDisposable
     ICategoryRepository Categories { get; }
     ICategoryProductRepository CategoryProducts { get; } // Add this
     IReviewRepository Reviews { get; } // Add this
+    IBannerRepository Banners { get; }
+    ICouponRepository Coupons { get; }
 
 
     Task<int> CompleteAsync();
 }
+
 

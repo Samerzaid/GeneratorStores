@@ -1,21 +1,241 @@
 ﻿@inherits LayoutComponentBase
+@using GeneratorStores.DataAccess.Services
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject ICartService CartService
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Top Navbar -->
+    <div class="navbar d-flex justify-content-between align-items-center px-4 py-3 shadow-sm bg-white">
+        <!-- Logo -->
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4 text-dark" href="/">
+            <i class="bi bi-gem"></i> Shop
+        </a>
+
+        <!-- Navigation Links -->
+        <div class="main-navbar d-flex align-items-center gap-4 flex-wrap">
+            <NavLink class="nav-link-modern" href="" Match="NavLinkMatch.All">
+                <i class="bi bi-house-door me-1"></i> Home
+            </NavLink>
+            <NavLink class="nav-link-modern" href="Products">
+                <i class="bi bi-box-seam me-1"></i> Products
+            </NavLink>
+            <NavLink class="nav-link-modern position-relative" href="Cart">
+                <i class="bi bi-cart3 me-1"></i> Cart
+
+                @if (cartCount > 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        @cartCount
+                    </span>
+                }
+            </NavLink>
+
+            <NavLink class="nav-link-modern" href="Orders">
+                <i class="bi bi-receipt me-1"></i> Orders
+            </NavLink>
+
+            <AuthorizeView>
+                <Authorized Context="auth">
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <span class="fw-semibold text-dark">
+                            👋 Hi, @auth.User.Identity?.Name
+                        </span>
+
+                        <form class="d-inline" action="Account/Logout" method="post">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2 rounded-pill px-3">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </Authorized>
+
+                <NotAuthorized>
+                    <NavLink class="nav-link-modern" href="Account/Register">
+                        <i class="bi bi-person-plus me-1"></i> Register
+                    </NavLink>
+                    <NavLink class="nav-link-modern" href="Account/Login">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                    </NavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <!-- Icons -->
+        <div class="d-flex gap-3 align-items-center position-relative">
+            
+        </div>
     </div>
 
-    <main>
-       
-
-        <article class="content px-4">
+    <!-- Main Content -->
+    <div class="flex-grow-1">
+        <article class="container py-4">
             @Body
         </article>
-    </main>
-</div>
+    </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+    <!-- Sticky Footer -->
+    <footer class="footer-section bg-dark text-white pt-4 pb-2 mt-auto">
+        <div class="container text-center">
+            <h5 class="fw-semibold mb-3">Stay Connected</h5>
+            <div class="d-flex justify-content-center gap-4 mb-2">
+                <a href="https://facebook.com" target="_blank" class="text-white fs-5"><i class="bi bi-facebook"></i></a>
+                <a href="https://twitter.com" target="_blank" class="text-white fs-5"><i class="bi bi-twitter"></i></a>
+                <a href="https://instagram.com" target="_blank" class="text-white fs-5"><i class="bi bi-instagram"></i></a>
+                <a href="https://linkedin.com" target="_blank" class="text-white fs-5"><i class="bi bi-linkedin"></i></a>
+            </div>
+            <p class="mb-0 small">&copy; @DateTime.Now.Year GeneratorStores. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+
+@code {
+    private string? currentUrl;
+    private int cartCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+        CartService.CartChanged += UpdateCartCount;
+
+        await UpdateCartCountAsync();
+
+        CartService.CartChanged += UpdateCartCount;
+    }
+
+    private async void UpdateCartCount()
+    {
+        Console.WriteLine("CartChanged event received.");
+        await UpdateCartCountAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+
+    private async Task UpdateCartCountAsync()
+    {
+        cartCount = (await CartService.GetCartItems()).Count();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+        CartService.CartChanged -= UpdateCartCount;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await UpdateCartCountAsync();
+            StateHasChanged();
+        }
+    }
+
+}
+
+
+
+<style>
+    .navbar a.nav-link {
+        color: black;
+        text-decoration: none;
+    }
+
+        .navbar a.nav-link:hover {
+            color: #555;
+        }
+
+    .navbar .badge {
+        font-size: 0.75rem;
+        padding: 4px 6px;
+        box-shadow: 0 0 0.3rem rgba(0, 0, 0, 0.2);
+    }
+
+    .footer-section {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+        .footer-section a:hover {
+            color: #0d6efd !important;
+            transition: color 0.3s ease;
+        }
+
+    .logout-button {
+        background-color: transparent;
+        border: none;
+        padding: 6px 12px;
+        font-weight: 500;
+        color: #333;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+        .logout-button:hover {
+            background-color: #f0f0f0;
+            color: #000;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .logout-button i {
+            transition: transform 0.2s ease;
+        }
+
+        .logout-button:hover i {
+            transform: translateX(2px);
+        }
+
+    .main-navbar {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 0.5rem 1rem;
+    }
+
+    .nav-link-modern {
+        color: #333;
+        font-weight: 500;
+        text-decoration: none;
+        padding: 0.4rem 0.75rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s ease, color 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+
+        .nav-link-modern:hover {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: #0d6efd;
+            text-decoration: none;
+        }
+
+        .nav-link-modern.active {
+            background-color: #0d6efd;
+            color: white !important;
+        }
+
+        .nav-link-modern i {
+            font-size: 1rem;
+        }
+
+    .navbar .badge {
+        font-size: 0.7rem;
+        padding: 4px 7px;
+        min-width: 20px;
+    }
+
+
+</style>
+
+    
