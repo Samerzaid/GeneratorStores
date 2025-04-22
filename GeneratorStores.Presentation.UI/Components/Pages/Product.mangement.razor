@@ -9,7 +9,9 @@
 @inject IJSRuntime JSRuntime
 @inject IProductService ProductService
 
-<h1 class="text-center my-4 fw-bold">Product Management</h1>
+<h1 class="text-center my-4 fw-bold">
+    <i class="fas fa-cubes"></i>	 Product Management
+</h1>
 
 <div class="container">
     <!-- Top Section: Add Product and Search -->
@@ -41,7 +43,7 @@
                 <div class="col">
                     <div class="card h-100 shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title text-primary">@product.ProductName</h5>
+                            <h5 class="product-title text-dark">@product.ProductName</h5>
                             <p class="card-text text-muted">@product.ProductDescription</p>
                             <p class="fw-bold text-success">Price: $@product.Price</p>
                             @if (product.Discount.HasValue && product.Discount > 0)

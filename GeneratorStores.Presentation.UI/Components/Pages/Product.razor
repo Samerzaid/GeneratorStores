@@ -8,19 +8,26 @@
 @inject ICategoryService CategoryService
 @inject ICartService CartService
 @inject IReviewService ReviewService
+@inject AuthenticationStateProvider AuthProvider
 
-<h1 class="text-center my-4 fw-bold">Our Exclusive Products</h1>
+<h1 class="text-center my-4 fw-bold"> <i class="fas fa-cubes"></i>	Our Exclusive Products</h1>
 
 <div class="container">
     <div class="row mb-4 align-items-center">
+        <!-- Category Filter -->
         <div class="col-md-4">
-            <select class="form-select" @onchange="OnCategorySelected">
-                <option value="">All Categories</option>
-                @foreach (var category in categories)
-                {
-                    <option value="@category.Id">@category.Name</option>
-                }
-            </select>
+            <div class="position-relative">
+                <i class="fas fa-tags position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <select class="form-select ps-5 py-2 rounded-3 border border-secondary-subtle shadow-sm"
+                        style="transition: border-color 0.3s, box-shadow 0.3s;"
+                        @onchange="OnCategorySelected">
+                    <option value="">All Categories</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+            </div>
         </div>
         <div class="col-md-8 text-end">
             <span class="me-2">View</span>
@@ -63,7 +70,7 @@
                             </div>
 
                             <div class="product-header">
-                                <h5 class="product-title text-primary">@product.ProductName</h5>
+                                <h5 class="product-title text-dark">@product.ProductName</h5>
                                 <p class="product-description text-muted">@product.ProductDescription</p>
                             </div>
 
@@ -86,78 +93,44 @@
                                 <i class="fa fa-cart-plus me-2"></i> Add to Cart
                             </button>
 
-                            <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center mt-2" @onclick="() => LoadReviewsForProduct(product.Id)">
-                                <i class="fa fa-comments me-2"></i> Show Reviews
-                            </button>
-
-                            @if (reviewsByProduct.ContainsKey(product.Id))
-                            {
-                                @if (reviewsByProduct[product.Id].Any())
-                                {
-                                    <ul class="mt-2">
-                                        @foreach (var review in reviewsByProduct[product.Id])
-                                        {
-                                            <li>
-                                                <strong>@review.User.FullName</strong>:
-                                                <em>"@review.Comment"</em>
-                                                <span class="d-flex align-items-center">
-                                                    @for (var i = 0; i < review.Rating; i++)
-                                                    {
-                                                        <i class="fa fa-star text-warning me-1"></i>
-                                                    }
-                                                    @for (var i = review.Rating; i < 5; i++)
-                                                    {
-                                                        <i class="fa fa-star text-muted me-1"></i>
-                                                    }
-                                                </span>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <p class="text-muted mt-2">This product has no reviews yet.</p>
-                                }
-                            }
-                            else if (isLoadingReviews.Contains(product.Id))
-                            {
-                                <p class="text-muted mt-2">Loading reviews...</p>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="list-group">
-                @foreach (var product in filteredProducts)
-                {
-                    <div class="list-group-item mb-3 border rounded p-3 d-flex">
-                        <img src="images/@product.ImageName" class="img-thumbnail me-3" style="width: 150px; object-fit: contain;" />
-                        <div class="flex-grow-1">
-                            <h5 class="mb-1">@product.ProductName</h5>
-                            <p class="mb-1 text-muted">@product.ProductDescription</p>
-                            <p class="fw-bold">
-                                @if (product.Discount.HasValue && product.Discount > 0)
-                                {
-                                    <span class="text-danger me-2 text-decoration-line-through">$@product.Price.ToString("0.00")</span>
-                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
-                                }
-                                else
-                                {
-                                    <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
-                                }
-                            </p>
-                            <p class="text-muted small">Available: @product.AmountOfProduct</p>
                             <div class="d-flex gap-2 mt-2">
-                                <button class="btn btn-sm btn-outline-primary modern-btn flex-grow-1" @onclick="() => AddToCart(product)">
-                                    <i class="fa fa-cart-plus me-1"></i> Add to Cart
+                                <button class="btn btn-outline-secondary flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
+                                    <i class="fa fa-comments me-2"></i> Show Reviews
                                 </button>
-                                <button class="btn btn-sm btn-outline-secondary modern-btn flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
-                                    <i class="fa fa-comments me-1"></i> Reviews
-                                </button>
+                                @if (!string.IsNullOrWhiteSpace(userId))
+                                {
+                                    <button class="btn btn-outline-success flex-grow-1" @onclick="() => ToggleAddReviewForm(product.Id)">
+                                        <i class="fa fa-pen me-2"></i> Add Review
+                                    </button>
+                                }
                             </div>
+
+                            @if (showAddReviewForm.Contains(product.Id))
+                            {
+                                <div class="review-form bg-light p-3 rounded mt-3 shadow-sm">
+                                    <h6 class="fw-bold mb-3">Leave a Review</h6>
+
+                                    <div class="mb-2">
+                                        <textarea class="form-control" rows="3" placeholder="Your comment..."
+                                                  @bind="GetOrCreateReview(product.Id).Comment"></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Rating</label>
+                                        <select class="form-select w-50" @bind="GetOrCreateReview(product.Id).Rating">
+                                            <option value="">Select rating</option>
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <option value="@i">@i</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <button class="btn btn-success w-100" @onclick="() => SubmitReview(product.Id)">
+                                        <i class="fa fa-paper-plane me-2"></i> Submit Review
+                                    </button>
+                                </div>
+                            }
 
                             @if (reviewsByProduct.ContainsKey(product.Id))
                             {
@@ -204,6 +177,133 @@
     }
 </div>
 
+<div class="container">
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (filteredProducts.Any())
+    {
+        @if (isGridView)
+        {
+            <div class="row g-4">
+                @foreach (var product in filteredProducts)
+                {
+                    @* Existing grid view code remains unchanged *@
+                }
+            </div>
+        }
+        else
+        {
+            <div class="list-group">
+                @foreach (var product in filteredProducts)
+                {
+                    <div class="list-group-item mb-3 border rounded p-3">
+                        <div class="d-flex">
+                            <img src="images/@product.ImageName" class="img-thumbnail me-3" style="width: 150px; object-fit: contain;" />
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">@product.ProductName</h5>
+                                <p class="mb-1 text-muted">@product.ProductDescription</p>
+                                <p class="fw-bold">
+                                    @if (product.Discount.HasValue && product.Discount > 0)
+                                    {
+                                        <span class="text-danger me-2 text-decoration-line-through">$@product.Price.ToString("0.00")</span>
+                                        <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success">$@product.FinalPrice.ToString("0.00")</span>
+                                    }
+                                </p>
+                                <p class="text-muted small">Available: @product.AmountOfProduct</p>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button class="btn btn-outline-primary flex-grow-1" @onclick="() => AddToCart(product)">
+                                        <i class="fa fa-cart-plus me-1"></i> Add to Cart
+                                    </button>
+                                    <button class="btn btn-outline-secondary flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
+                                        <i class="fa fa-comments me-1"></i> Show Reviews
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(userId))
+                                    {
+                                        <button class="btn btn-outline-success flex-grow-1" @onclick="() => ToggleAddReviewForm(product.Id)">
+                                            <i class="fa fa-pen me-1"></i> Add Review
+                                        </button>
+                                    }
+                                </div>
+
+                                @if (showAddReviewForm.Contains(product.Id))
+                                {
+                                    <div class="review-form bg-light p-3 rounded mt-3 shadow-sm">
+                                        <h6 class="fw-bold mb-3">Leave a Review</h6>
+                                        <textarea class="form-control mb-2" placeholder="Your comment..." @bind="GetOrCreateReview(product.Id).Comment"></textarea>
+                                        <div class="mb-3">
+                                            <label class="form-label">Rating</label>
+                                            <select class="form-select w-50" @bind="GetOrCreateReview(product.Id).Rating">
+                                                <option value="">Select rating</option>
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <option value="@i">@i</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-success w-100" @onclick="() => SubmitReview(product.Id)">
+                                            <i class="fa fa-paper-plane me-2"></i> Submit Review
+                                        </button>
+                                    </div>
+                                }
+
+                                @if (reviewsByProduct.ContainsKey(product.Id))
+                                {
+                                    @if (reviewsByProduct[product.Id].Any())
+                                    {
+                                        <ul class="mt-2">
+                                            @foreach (var review in reviewsByProduct[product.Id])
+                                            {
+                                                <li>
+                                                    <strong>@review.User.FullName</strong>:
+                                                    <em>"@review.Comment"</em>
+                                                    <span class="d-flex align-items-center">
+                                                        @for (var i = 0; i < review.Rating; i++)
+                                                        {
+                                                            <i class="fa fa-star text-warning me-1"></i>
+                                                        }
+                                                        @for (var i = review.Rating; i < 5; i++)
+                                                        {
+                                                            <i class="fa fa-star text-muted me-1"></i>
+                                                        }
+                                                    </span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mt-2">This product has no reviews yet.</p>
+                                    }
+                                }
+                                else if (isLoadingReviews.Contains(product.Id))
+                                {
+                                    <p class="text-muted mt-2">Loading reviews...</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <p class="text-center text-muted">No products found.</p>
+    }
+</div>
+
+
 @code {
     private List<CategoryWithProductsDto> categories = new();
     private List<DataAccess.Entities.Product> products = new();
@@ -213,15 +313,76 @@
     private bool isLoading = true;
     private int selectedCategoryId;
     private bool isGridView = true;
+    private string userId;
+    private Dictionary<int, Review> newReviews = new(); // One review per product
+    private HashSet<int> showAddReviewForm = new();
+
+    private void ToggleAddReviewForm(int productId)
+    {
+        if (showAddReviewForm.Contains(productId))
+            showAddReviewForm.Remove(productId);
+        else
+            showAddReviewForm.Add(productId);
+    }
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
         await LoadCategoriesAsync();
         await LoadProductsAsync();
         filteredProducts = products;
         isLoading = false;
     }
+
+    private Review GetOrCreateReview(int productId)
+    {
+        if (!newReviews.ContainsKey(productId))
+        {
+            newReviews[productId] = new Review
+            {
+                ProductId = productId,
+                Rating = 0,
+                Comment = ""
+            };
+        }
+
+        return newReviews[productId];
+    }
+
+    private async Task SubmitReview(int productId)
+{
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "You must be logged in to submit a review.");
+        return;
+    }
+
+    var review = GetOrCreateReview(productId);
+
+    if (review.Rating < 1 || review.Rating > 5)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", "Please select a rating between 1 and 5.");
+        return;
+    }
+
+    review.UserId = userId;
+    review.CreatedAt = DateTime.UtcNow;
+
+    await ReviewService.AddReviewAsync(review);
+
+    // Refresh reviews
+    reviewsByProduct.Remove(productId);
+    await LoadReviewsForProduct(productId);
+    newReviews.Remove(productId);
+
+}
+
+
 
     private async Task LoadCategoriesAsync()
     {
@@ -281,6 +442,7 @@
     }
 }
 
+
 <style>
     .product-card:hover {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -339,3 +501,5 @@
 
 
 </style>
+
+        

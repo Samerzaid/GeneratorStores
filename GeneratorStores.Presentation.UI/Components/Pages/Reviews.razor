@@ -17,43 +17,58 @@
 
 <div class="container">
 
+    <!-- Toggle Button -->
+    <button class="btn btn-success mb-4" @onclick="ToggleAddReview">
+        <i class="fas fa-plus-circle me-2"></i> Add Review
+    </button>
+
+
     <!-- Add Review Form -->
-    <div class="card mb-5 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add a Review</h5>
+    @if (showAddReviewForm)
+    {
+        <div class="card mb-5 shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header bg-gradient bg-dark text-white rounded-top">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>New Review</h5>
+            </div>
+
+            <div class="card-body">
+                <EditForm Model="newReview" OnSubmit="HandleSubmitWithUserId">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <select class="form-select" @bind="newReview.ProductId">
+                            <option value="">-- Select a product --</option>
+                            @foreach (var product in allProducts)
+                            {
+                                <option value="@product.Id">@product.ProductName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Comment</label>
+                        <InputTextArea class="form-control" @bind-Value="newReview.Comment" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <InputNumber class="form-control w-25" @bind-Value="newReview.Rating" TValue="int" />
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i> Submit
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="ToggleAddReview">
+                            Cancel
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
         </div>
-        <div class="card-body">
-            <EditForm Model="newReview" OnSubmit="HandleSubmitWithUserId" FormName="AddReview">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="mb-3">
-                    <label class="form-label">Select Product</label>
-                    <select class="form-select" @bind="newReview.ProductId">
-                        <option value="">-- Select a product --</option>
-                        @foreach (var product in allProducts)
-                        {
-                            <option value="@product.Id">@product.ProductName</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Comment</label>
-                    <InputTextArea class="form-control" @bind-Value="newReview.Comment" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Rating (1–5)</label>
-                    <InputNumber @bind-Value="newReview.Rating" class="form-control w-25" TValue="int" />
-                </div>
-
-                <button class="btn btn-success" type="submit">
-                    <i class="fas fa-paper-plane me-2"></i>Submit Review
-                </button>
-            </EditForm>
-        </div>
-    </div>
+    }
 
     <!-- Review List -->
     @if (isLoading)
@@ -73,9 +88,10 @@
                     <div class="card shadow-sm h-100">
                         <div class="card-body d-flex flex-column justify-content-between">
                             <div class="mb-2">
-                                <h5 class="card-title text-primary">
+                                <h5 class="card-title text-dark">
                                     <i class="fas fa-user-circle me-2"></i>@review.User?.FullName
                                 </h5>
+
                                 <p class="card-subtitle text-muted">
                                     <i class="fas fa-box me-1"></i> @review.Product?.ProductName
                                 </p>
@@ -121,6 +137,7 @@
 
     private Review newReview = new();
     private string userId;
+    private bool showAddReviewForm = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,16 +152,21 @@
         var user = authState.User;
         userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
 
-
         isLoading = false;
     }
 
-    private async Task HandleAddReview()
+    private void ToggleAddReview()
     {
-        if (string.IsNullOrWhiteSpace(userId) || newReview.ProductId == 0 || newReview.Rating < 1 || newReview.Rating > 5)
+        showAddReviewForm = !showAddReviewForm;
+    }
+
+    private async Task HandleSubmitWithUserId(EditContext context)
+    {
+        newReview.UserId = userId;
+
+        if (!context.Validate())
             return;
 
-        newReview.UserId = userId;
         newReview.CreatedAt = DateTime.UtcNow;
 
         await ReviewService.AddReviewAsync(newReview);
@@ -152,21 +174,6 @@
         // Refresh list
         reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
         newReview = new Review(); // Reset form
+        showAddReviewForm = false;
     }
-
-    private async Task HandleSubmitWithUserId(EditContext context)
-    {
-        // Set the logged-in user's ID before validation
-        newReview.UserId = userId;
-
-        // Revalidate after setting UserId
-        if (!context.Validate())
-            return;
-
-        await ReviewService.AddReviewAsync(newReview);
-        reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
-        newReview = new Review(); // reset
-    }
-
 }
-
