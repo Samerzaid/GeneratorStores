@@ -39,4 +39,29 @@ public class UserService
         var response = await _httpClient.DeleteAsync($"api/Users/{id}");
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task ForgotPasswordAsync(string email)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/Users/forgot-password", new { Email = email });
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ResetPasswordAsync(string email, string password, string code)
+    {
+        var payload = new
+        {
+            Email = email,
+            Password = password,
+            Code = code
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("api/Users/reset-password", payload);
+        response.EnsureSuccessStatusCode();
+    }
+
+
 }
+
+
+
+

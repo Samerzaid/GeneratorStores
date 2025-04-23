@@ -1,7 +1,10 @@
 ﻿using GeneratorStores.DataAccess.Entities;
 using GeneratorStores.DataAccess.Interfaces;
+using GeneratorStores.DataAccess.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
 
 namespace GeneratorStores.API.Controllers;
 
@@ -11,11 +14,18 @@ public class UsersController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public UsersController(UserManager<ApplicationUser> userManager)
+    private readonly IEmailService _emailService;
+
+    private readonly IConfiguration _config;
+
+    public UsersController(UserManager<ApplicationUser> userManager, IEmailService emailService, IConfiguration config)
     {
         _userManager = userManager;
+        _emailService = emailService;
+        _config = config;
     }
 
+   
     [HttpGet]
     public IActionResult GetAllUsers()
     {
@@ -98,5 +108,69 @@ public class UsersController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
+        {
+            return Ok(); // Do not reveal if the user doesn't exist or email is not confirmed
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        var callbackUrl = $"https://localhost:7094/Account/ResetPassword?code={encodedToken}";
+
+        // Send the email
+        await _emailService.SendEmailAsync(
+            to: user.Email,
+            subject: "Reset Your Password",
+            body: $"Click the link to reset your password: <a href='{callbackUrl}'>Reset Password</a>"
+        );
+
+        return Ok(new { Message = "Reset link has been sent to your email." });
+    }
+
+    public class ForgotPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            // Do not reveal that the user does not exist
+            return Ok(new { Message = "Reset successful." });
+        }
+
+        var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(model.Code));
+
+        var result = await _userManager.ResetPasswordAsync(user, decodedToken, model.Password);
+        if (!result.Succeeded)
+        {
+            return BadRequest(result.Errors);
+        }
+        Console.WriteLine($"Encoded token: {model.Code}");
+        Console.WriteLine($"Decoded token: {decodedToken}");
+
+
+        return Ok(new { Message = "Password has been reset successfully." });
+    }
+
+    public class ResetPasswordDto
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Code { get; set; } = "";
+    }
+
+
 }
+
+
+
 
