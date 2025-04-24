@@ -9,6 +9,9 @@ public interface IProductService
     Task AddProductAsync(Product product);
     Task UpdateProductAsync(Product product);
     Task DeleteProductAsync(int id);
+    Task<IEnumerable<Product>> GetNewArrivalsAsync(int count = 6);
+    Task<IEnumerable<Product>> GetOldArrivalsAsync(int count = 6);
+
 
 }
 

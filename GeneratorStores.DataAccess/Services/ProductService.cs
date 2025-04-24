@@ -39,6 +39,24 @@ public class ProductService : IProductService
         var response = await _httpClient.DeleteAsync($"api/Products/{id}");
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<IEnumerable<Product>> GetNewArrivalsAsync(int count = 6)
+    {
+        var all = await GetAllProductsAsync();
+        return all.OrderByDescending(p => p.DateAdded).Take(count);
+    }
+
+    public async Task<IEnumerable<Product>> GetOldArrivalsAsync(int count = 6)
+    {
+        var all = await GetAllProductsAsync();
+        return all
+            .OrderBy(p => p.DateAdded) // ✅ shows oldest first
+            .Take(count);
+    }
+
+
+
+
 }
 
 

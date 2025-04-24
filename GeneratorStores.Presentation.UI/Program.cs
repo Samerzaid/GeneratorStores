@@ -84,6 +84,11 @@ builder.Services.AddHttpClient<IReviewService, ReviewService>(client =>
     client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
 });
 
+builder.Services.AddHttpClient<ICheckoutOrderService, CheckoutOrderService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
+});
+
 builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL

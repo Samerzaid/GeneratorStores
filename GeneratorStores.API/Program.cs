@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using GeneratorStores.DataAccess.Entities;
 using GeneratorStores.DataAccess.Services;
+using GeneratorStores.API.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,9 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryProductRepository, CategoryProductRepository>(); // Add CategoryProductRepository
 
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+builder.Services.Configure<PayPalSettings>(
+    builder.Configuration.GetSection("PayPal"));
 
 
 builder.Services.AddEndpointsApiExplorer();

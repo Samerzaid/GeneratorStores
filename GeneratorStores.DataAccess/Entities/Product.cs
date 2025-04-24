@@ -15,8 +15,9 @@ public class Product : IEntity<int>
         public bool State { get; set; }
         public decimal? Discount { get; set; }
         public string? ImageName { get; set; }
+        public DateTime DateAdded { get; set; } = DateTime.UtcNow;
 
-        [JsonIgnore]
+    [JsonIgnore]
         public double FinalPrice => Discount.HasValue
             ? Price - (Price * (double)(Discount.Value / 100))
             : Price;

@@ -1,0 +1,54 @@
+﻿@using GeneratorStores.DataAccess.Services
+@using GeneratorStores.DataAccess.Dtos
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@rendermode InteractiveServer
+@inject IProductService ProductService
+
+<section class="new-arrivals py-5">
+    <div class="container">
+        <h2 class="fw-bold mb-4" style="color: #4d594a;">NEW ARRIVALS</h2>
+
+        @if (products == null)
+        {
+            <p>Loading...</p>
+        }
+        else
+        {
+            <div class="d-flex overflow-auto gap-4 pb-2">
+                @foreach (var product in products)
+                {
+                    <div class="product-card bg-white shadow-sm rounded-4 p-3" style="min-width: 250px;">
+                        <div class="position-relative">
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                                    -@product.Discount.Value% OFF
+                                </span>
+                            }
+                            <img src="images/@product.ImageName" class="img-fluid rounded-3" style="height: 180px; object-fit: contain;" />
+                        </div>
+                        <h6 class="mt-3 fw-semibold">@product.ProductName</h6>
+                        <p class="text-danger fw-bold mb-1">
+                            $@product.FinalPrice.ToString("0.00")
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <del class="text-muted fw-normal ms-1">$@product.Price.ToString("0.00")</del>
+                            }
+                        </p>
+                        <button class="btn btn-outline-success w-100 fw-semibold">Add to Cart</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private IEnumerable<DataAccess.Entities.Product> products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        products = await ProductService.GetNewArrivalsAsync(6);
+    }
+}

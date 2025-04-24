@@ -78,6 +78,11 @@ namespace GeneratorStores.DataAccess
                 .WithMany() // If ApplicationUser has a collection of Reviews, replace this with .WithMany(u => u.Reviews)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Product>()
+                .Property(p => p.Discount)
+                .HasPrecision(5, 2); // e.g., allows 999.99
+
         }
     }
 }

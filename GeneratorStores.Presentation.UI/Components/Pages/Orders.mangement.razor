@@ -85,6 +85,12 @@
                     <div class="mb-3">
                         <strong>Date:</strong> @selectedOrder.OrderDate.ToString("f")
                     </div>
+                    <div class="mb-3">
+                        <strong>Status:</strong> <span class="badge bg-info text-dark">@selectedOrder.Status</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Transaction ID:</strong> @selectedOrder.TransId
+                    </div>
 
                     <h5 class="mt-4 mb-3">🛍️ Products</h5>
                     <ul class="list-group">

@@ -8,8 +8,8 @@ using ApplicationUser = GeneratorStores.DataAccess.Entities.ApplicationUser;
 
 namespace GeneratorStores.API.Controllers;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -20,7 +20,6 @@ public class OrdersController : ControllerBase
         _unitOfWork = unitOfWork;
         _userManager = userManager;
     }
-
 
     [HttpGet]
     public async Task<IActionResult> GetAllOrders()
@@ -33,10 +32,7 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetOrderById(int id)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(id);
-        if (order == null)
-        {
-            return NotFound();
-        }
+        if (order == null) return NotFound();
         return Ok(order);
     }
 
@@ -44,34 +40,40 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> GetOrdersByUserId(string userId)
     {
         var orders = await _unitOfWork.Orders.GetOrdersByUserIdAsync(userId);
-        if (!orders.Any())
-        {
-            return NotFound($"No orders found for User ID {userId}");
-        }
+        if (!orders.Any()) return NotFound($"No orders found for User ID {userId}");
         return Ok(orders);
     }
 
-
+    // ✅ Create full order after PayPal checkout
     [HttpPost]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto createOrderDto)
+    public async Task<IActionResult> CreateOrder([FromBody] Order order)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        // Fetch the user using UserManager
+        var user = await _userManager.FindByIdAsync(order.UserId);
+        if (user == null) return BadRequest("User not found.");
+
+        order.User = user;
+        order.OrderDate = DateTime.UtcNow;
+
+        await _unitOfWork.Orders.AddAsync(order);
+        await _unitOfWork.CompleteAsync();
+
+        return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
+    }
+
+    // ✅ Keep support for CreateOrderDto if needed
+    [HttpPost("dto")]
+    public async Task<IActionResult> CreateOrderFromDto([FromBody] CreateOrderDto createOrderDto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
         var user = await _userManager.FindByIdAsync(createOrderDto.CustomerId);
-        if (user == null)
-        {
-            return BadRequest($"User with ID {createOrderDto.CustomerId} not found.");
-        }
+        if (user == null) return BadRequest($"User with ID {createOrderDto.CustomerId} not found.");
 
-        // Fetch the products
         var products = createOrderDto.ProductIds.Select(id => _unitOfWork.Products.GetByIdAsync(id).Result).ToList();
         var totalPrice = products.Sum(p => p.Price);
 
-        // Create the order
         var order = new Order
         {
             UserId = user.Id,
@@ -93,22 +95,13 @@ public class OrdersController : ControllerBase
         return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
     }
 
-
-
-
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order order)
     {
-        if (id != order.Id)
-        {
-            return BadRequest("Order ID mismatch");
-        }
+        if (id != order.Id) return BadRequest("Order ID mismatch");
 
         var existingOrder = await _unitOfWork.Orders.GetByIdAsync(id);
-        if (existingOrder == null)
-        {
-            return NotFound();
-        }
+        if (existingOrder == null) return NotFound();
 
         await _unitOfWork.Orders.UpdateAsync(order);
         await _unitOfWork.CompleteAsync();
@@ -119,14 +112,37 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> DeleteOrder(int id)
     {
         var existingOrder = await _unitOfWork.Orders.GetByIdAsync(id);
-        if (existingOrder == null)
-        {
-            return NotFound();
-        }
+        if (existingOrder == null) return NotFound();
 
         await _unitOfWork.Orders.DeleteAsync(id);
         await _unitOfWork.CompleteAsync();
         return NoContent();
     }
+
+    [HttpPost("create-full")]
+    public async Task<IActionResult> CreateFullOrder([FromBody] Order order)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var user = await _userManager.FindByIdAsync(order.UserId);
+        if (user == null)
+            return BadRequest("User not found.");
+
+        order.User = user;
+        order.OrderDate = DateTime.UtcNow;
+
+        // Optional: Set default status or TransId if not already set
+        order.Status ??= "Pending";
+
+        await _unitOfWork.Orders.AddAsync(order);
+        await _unitOfWork.CompleteAsync();
+
+        return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
+    }
+
+
 }
+
+
 

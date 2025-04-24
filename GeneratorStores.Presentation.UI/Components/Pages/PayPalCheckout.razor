@@ -1,0 +1,62 @@
+﻿@page "/PayPalCheckout"
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@inject IOrderService OrderService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div id="paypal-button-container"></div>
+
+@code {
+    [Parameter]
+    public List<DataAccess.Entities.Product> Products { get; set; } = new();
+
+    private DotNetObjectReference<PayPalCheckout>? dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var total = Products.Sum(p => p.FinalPrice).ToString("0.00", CultureInfo.InvariantCulture);
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("initPayPal", total, dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnPaymentSuccess(string transactionId)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = UserManager.GetUserId(user);
+
+        var order = new Order
+            {
+                UserId = userId,
+                TotalPrice = Products.Sum(p => p.FinalPrice),
+                TransId = transactionId,
+                Status = "Approved",
+                OrderDate = DateTime.UtcNow,
+                ProductsInOrder = Products.Select(p => new ProductOrder
+                {
+                    ProductId = p.Id,
+                    ProductName = p.ProductName,
+                    UnitPrice = p.FinalPrice,
+                    Amount = 1
+                }).ToList()
+            };
+
+        await OrderService.CreateOrderAsync(order);
+        NavigationManager.NavigateTo("/OrderSuccess");
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+    }
+}

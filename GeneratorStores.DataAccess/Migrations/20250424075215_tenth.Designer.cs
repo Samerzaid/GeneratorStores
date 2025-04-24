@@ -4,6 +4,7 @@ using GeneratorStores.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GeneratorStores.DataAccess.Migrations
 {
     [DbContext(typeof(GeneratorDbContext))]
-    partial class GeneratorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250424075215_tenth")]
+    partial class tenth
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -224,12 +227,8 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.Property<int>("AmountOfProduct")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("DateAdded")
-                        .HasColumnType("datetime2");
-
                     b.Property<decimal?>("Discount")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ImageName")
                         .HasColumnType("nvarchar(max)");

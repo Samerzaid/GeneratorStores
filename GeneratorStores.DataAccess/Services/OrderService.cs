@@ -32,18 +32,17 @@ public class OrderService : IOrderService
             {
                 return await response.Content.ReadFromJsonAsync<IEnumerable<Order>>() ?? new List<Order>();
             }
-            // If the status code is not 200, return an empty list
+
             return new List<Order>();
         }
         catch (Exception ex)
         {
-            // Log the exception (optional)
             Console.WriteLine($"Error fetching orders for user {userId}: {ex.Message}");
             return new List<Order>();
         }
     }
 
-
+    // Used after PayPal checkout – sends full Order with TransId, Status, etc.
     public async Task CreateOrderAsync(Order order)
     {
         var response = await _httpClient.PostAsJsonAsync("api/Orders", order);
@@ -62,30 +61,35 @@ public class OrderService : IOrderService
         response.EnsureSuccessStatusCode();
     }
 
+    // Used for regular checkout (not PayPal) – sends CreateOrderDto
     public async Task PlaceOrderAsync(IEnumerable<Product> products)
-{
-    var productIds = products.Select(p => p.Id).ToList();
-
-    var userResponse = await _httpClient.GetAsync("api/Users/current"); // Endpoint to get the current user
-    if (!userResponse.IsSuccessStatusCode)
     {
-        throw new Exception("Failed to fetch the current user.");
+        var productIds = products.Select(p => p.Id).ToList();
+
+        var userResponse = await _httpClient.GetAsync("api/Users/current");
+        if (!userResponse.IsSuccessStatusCode)
+        {
+            throw new Exception("Failed to fetch the current user.");
+        }
+
+        var currentUser = await userResponse.Content.ReadFromJsonAsync<ApplicationUser>();
+        if (currentUser == null)
+        {
+            throw new Exception("Current user could not be determined.");
+        }
+
+        var createOrderDto = new CreateOrderDto
+        {
+            CustomerId = currentUser.Id,
+            ProductIds = productIds
+        };
+
+        // 🛠 Update endpoint to match your controller
+        var response = await _httpClient.PostAsJsonAsync("api/Orders/dto", createOrderDto);
+        response.EnsureSuccessStatusCode();
     }
-
-    var currentUser = await userResponse.Content.ReadFromJsonAsync<ApplicationUser>();
-    if (currentUser == null)
-    {
-        throw new Exception("Current user could not be determined.");
-    }
-
-    var createOrderDto = new CreateOrderDto
-    {
-        CustomerId = currentUser.Id,
-        ProductIds = productIds
-    };
-
-    var response = await _httpClient.PostAsJsonAsync("api/Orders", createOrderDto);
-    response.EnsureSuccessStatusCode();
 }
 
-}
+
+
+

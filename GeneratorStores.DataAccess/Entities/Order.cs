@@ -21,6 +21,10 @@ public class Order : IEntity<int>
 
     public ApplicationUser User { get; set; }
 
+    public string? TransId { get; set; }
+
+    public string? Status { get; set; } 
+
 }
 
 

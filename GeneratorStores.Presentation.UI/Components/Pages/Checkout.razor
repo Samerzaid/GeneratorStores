@@ -61,9 +61,8 @@
                 Total: $@products.Sum(p => p.FinalPrice).ToString("0.00")
             </h4>
 
-            <button class="btn btn-success btn-lg mt-3" @onclick="PlaceOrder">
-                <i class="fas fa-check-circle"></i> Place Order
-            </button>
+            <PayPalCheckout Products="@products" />
+
         </div>
     }
     else
@@ -122,3 +121,7 @@
         padding: 1rem;
     }
 </style>
+
+    
+
+    
