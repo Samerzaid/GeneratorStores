@@ -15,27 +15,39 @@ public class EmailService : IEmailService
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {
-        var smtpClient = new SmtpClient(_config["Smtp:Host"])
+        try
         {
-            Port = int.Parse(_config["Smtp:Port"]),
-            Credentials = new NetworkCredential(
-                _config["Smtp:Username"],
-                _config["Smtp:Password"]
-            ),
-            EnableSsl = true
-        };
+            var smtpClient = new SmtpClient(_config["Smtp:Host"])
+            {
+                Port = int.Parse(_config["Smtp:Port"]),
+                Credentials = new NetworkCredential(
+                    _config["Smtp:Username"],
+                    _config["Smtp:Password"]
+                ),
+                EnableSsl = true
+            };
 
-        var mailMessage = new MailMessage
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(_config["Smtp:Username"]),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(to);
+
+            await smtpClient.SendMailAsync(mailMessage);
+
+            Console.WriteLine($"✅ Email sent to {to}");
+        }
+        catch (Exception ex)
         {
-            From = new MailAddress(_config["Smtp:Username"]),
-            Subject = subject,
-            Body = body,
-            IsBodyHtml = true
-        };
-
-        mailMessage.To.Add(to);
-        await smtpClient.SendMailAsync(mailMessage);
+            Console.WriteLine($"❌ Failed to send email: {ex.Message}");
+            throw; // Optional: rethrow to bubble up
+        }
     }
+
 }
 
 

@@ -168,6 +168,54 @@ public class UsersController : ControllerBase
         public string Code { get; set; } = "";
     }
 
+    public class ConfirmEmailRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    [HttpGet("test-email")]
+    public async Task<IActionResult> TestEmail()
+    {
+        await _emailService.SendEmailAsync(
+            "your-own-email@gmail.com",
+            "Test Email from API",
+            "<h1>This is a test email</h1><p>It was sent from your backend.</p>"
+        );
+
+        return Ok("Test email sent");
+    }
+
+
+    [HttpPost("send-confirmation-email")]
+    public async Task<IActionResult> SendConfirmationEmail([FromBody] ConfirmEmailRequest model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        if (await _userManager.IsEmailConfirmedAsync(user))
+        {
+            return Ok(new { Message = "Email is already confirmed." });
+        }
+
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        var callbackUrl = $"https://localhost:7094/Account/ConfirmEmail?userId={user.Id}&code={encodedToken}";
+
+        await _emailService.SendEmailAsync(
+            to: user.Email,
+            subject: "Confirm Your Email",
+            body: $"Click to confirm your email: <a href='{callbackUrl}'>Confirm Email</a>"
+        );
+
+        Console.WriteLine("✅ Confirmation link: " + callbackUrl); // Debug link if email fails
+
+        return Ok(new { Message = "Confirmation email sent. Please check your inbox." });
+    }
+
 
 }
 

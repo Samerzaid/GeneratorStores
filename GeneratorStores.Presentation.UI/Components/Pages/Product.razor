@@ -8,7 +8,9 @@
 @inject ICategoryService CategoryService
 @inject ICartService CartService
 @inject IReviewService ReviewService
+@inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthProvider
+@inject IWishlistService WishlistService
 
 <h1 class="text-center my-4 fw-bold"> <i class="fas fa-cubes"></i>	Our Exclusive Products</h1>
 
@@ -93,10 +95,18 @@
                                 <i class="fa fa-cart-plus me-2"></i> Add to Cart
                             </button>
 
+                            <button class="btn btn-outline-danger w-100 mt-2"
+                                    @onclick="() => ToggleWishlist(product.Id)">
+                                <i class="fa @(wishlist.Contains(product.Id) ? "fa-heart" : "fa-heart") me-2"></i>
+                                @(wishlist.Contains(product.Id) ? "Remove from Wishlist" : "Add to Wishlist")
+                            </button>
+
                             <div class="d-flex gap-2 mt-2">
                                 <button class="btn btn-outline-secondary flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
                                     <i class="fa fa-comments me-2"></i> Show Reviews
                                 </button>
+
+
                                 @if (!string.IsNullOrWhiteSpace(userId))
                                 {
                                     <button class="btn btn-outline-success flex-grow-1" @onclick="() => ToggleAddReviewForm(product.Id)">
@@ -225,6 +235,11 @@
                                     <button class="btn btn-outline-primary flex-grow-1" @onclick="() => AddToCart(product)">
                                         <i class="fa fa-cart-plus me-1"></i> Add to Cart
                                     </button>
+                                    <button class="btn btn-outline-danger flex-grow-1"
+                                            @onclick="() => ToggleWishlist(product.Id)">
+                                        <i class="fa @(wishlist.Contains(product.Id) ? "fa-heart" : "fa-heart") me-1"></i>
+                                        @(wishlist.Contains(product.Id) ? "Remove from Wishlist" : "Add to Wishlist")
+                                    </button>
                                     <button class="btn btn-outline-secondary flex-grow-1" @onclick="() => LoadReviewsForProduct(product.Id)">
                                         <i class="fa fa-comments me-1"></i> Show Reviews
                                     </button>
@@ -316,6 +331,17 @@
     private string userId;
     private Dictionary<int, Review> newReviews = new(); // One review per product
     private HashSet<int> showAddReviewForm = new();
+    private List<DataAccess.Entities.Product> wishlistProducts;
+    private HashSet<int> wishlist = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            wishlist = await WishlistService.GetWishlistAsync();
+            StateHasChanged(); // force re-render now that data is available
+        }
+    }
 
     private void ToggleAddReviewForm(int productId)
     {
@@ -325,6 +351,23 @@
             showAddReviewForm.Add(productId);
     }
 
+    private async Task ToggleWishlist(int productId)
+    {
+        if (wishlist.Contains(productId))
+        {
+            wishlist.Remove(productId);
+            await WishlistService.RemoveFromWishlistAsync(productId);
+        }
+        else
+        {
+            wishlist.Add(productId);
+            await WishlistService.AddToWishlistAsync(productId);
+        }
+
+    }
+
+
+
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
@@ -332,12 +375,19 @@
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
-
         await LoadCategoriesAsync();
         await LoadProductsAsync();
         filteredProducts = products;
         isLoading = false;
     }
+
+    private bool _hasLoadedWishlist = false;
+
+   
+
+    
+
+
 
     private Review GetOrCreateReview(int productId)
     {
@@ -440,6 +490,8 @@
     {
         isGridView = grid;
     }
+
+    
 }
 
 

@@ -1,0 +1,116 @@
+﻿@page "/Wishlist"
+@using GeneratorStores.DataAccess.Services
+@inject IJSRuntime JSRuntime
+@inject IProductService ProductService
+@rendermode InteractiveServer
+@inject IWishlistService WishlistService
+@inject ICartService CartService
+
+<h2 class="mb-4 text-center fw-bold">My Wishlist</h2>
+
+@if (!hasLoaded)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (wishlistProducts == null || !wishlistProducts.Any())
+{
+    <div class="alert alert-info text-center">
+        <i class="fa fa-heart-o me-2"></i> Your wishlist is empty.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        @foreach (var product in wishlistProducts)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 rounded-4">
+                    <div class="position-relative">
+                        <img src="images/@product.ImageName" class="card-img-top p-3" style="object-fit: contain; height: 200px;" alt="@product.ProductName" />
+                        @if (product.Discount.HasValue && product.Discount > 0)
+                        {
+                            <span class="badge bg-danger position-absolute top-0 start-0 m-2 fs-6 rounded-end">
+                                -@product.Discount.Value% OFF
+                            </span>
+                        }
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title">@product.ProductName</h5>
+                            <p class="card-text text-muted">@product.ProductDescription</p>
+                        </div>
+
+                        <p class="fw-bold fs-5">
+                            Price:
+                            @if (product.Discount.HasValue && product.Discount > 0)
+                            {
+                                <span class="text-danger text-decoration-line-through me-2">
+                                    $@product.Price.ToString("0.00")
+                                </span>
+                            }
+                            <span class="text-success">
+                                $@product.FinalPrice.ToString("0.00")
+                            </span>
+                        </p>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-outline-primary flex-grow-1" @onclick="() => AddToCart(product)">
+                                <i class="fa fa-cart-plus me-1"></i> Add to Cart
+                            </button>
+                            <button class="btn btn-outline-danger flex-grow-1" @onclick="() => RemoveFromWishlist(product.Id)">
+                                <i class="fa fa-trash me-1"></i> Remove
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<DataAccess.Entities.Product> wishlistProducts;
+    private bool hasLoaded = false;
+
+    private async Task AddToCart(DataAccess.Entities.Product product)
+    {
+        await CartService.AddToCart(product);
+        await JSRuntime.InvokeVoidAsync("toast.show", $"{product.ProductName} added to cart.");
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasLoaded)
+        {
+            hasLoaded = true;
+
+            try
+            {
+                var ids = await JSRuntime.InvokeAsync<int[]>("wishlist.get");
+                var all = await ProductService.GetAllProductsAsync();
+                wishlistProducts = all.Where(p => ids.Contains(p.Id)).ToList();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load wishlist: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task RemoveFromWishlist(int productId)
+    {
+        await JSRuntime.InvokeVoidAsync("wishlist.remove", productId);
+        wishlistProducts = wishlistProducts.Where(p => p.Id != productId).ToList();
+        StateHasChanged();
+    }
+
+}
+
+                

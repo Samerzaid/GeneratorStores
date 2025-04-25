@@ -36,12 +36,19 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IProductOrderRepository, ProductOrderRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryProductRepository, CategoryProductRepository>(); // Add CategoryProductRepository
-
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+
 
 builder.Services.Configure<PayPalSettings>(
     builder.Configuration.GetSection("PayPal"));
 
+    builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.SignIn.RequireConfirmedEmail = true;
+});
+
+  
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -62,3 +69,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+

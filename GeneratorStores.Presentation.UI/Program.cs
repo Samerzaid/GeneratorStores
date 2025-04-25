@@ -61,7 +61,9 @@ builder.Services.AddHttpClient< UserService>(client =>
 });
 
 // Add email sender service
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
+
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Register HttpClient for the backend API and ProductService
 builder.Services.AddHttpClient<IProductService, ProductService>(client =>
@@ -89,10 +91,12 @@ builder.Services.AddHttpClient<ICheckoutOrderService, CheckoutOrderService>(clie
     client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
 });
 
-builder.Services.AddHttpClient<IEmailService, EmailService>(client =>
-{
-    client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
-});
+builder.Services.AddScoped<IWishlistService, WishlistService>();
+
+
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
+
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5013") });
 
@@ -130,4 +134,6 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+
 

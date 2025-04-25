@@ -3,6 +3,7 @@
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject ICartService CartService
+@inject IWishlistService WishlistService
 
 <body class="d-flex flex-column min-vh-100">
 
@@ -31,6 +32,17 @@
                     </span>
                 }
             </NavLink>
+            <NavLink class="nav-link-modern position-relative" href="Wishlist">
+                <i class="bi bi-heart me-1"></i> Wishlist
+
+                @if (wishlistCount > 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        @wishlistCount
+                    </span>
+                }
+            </NavLink>
+
 
             <NavLink class="nav-link-modern" href="Orders">
                 <i class="bi bi-receipt me-1"></i> Orders
@@ -96,7 +108,26 @@
 @code {
     private string? currentUrl;
     private int cartCount = 0;
+        private int wishlistCount = 0;
+      
 
+       
+
+            private async Task LoadWishlistCountAsync()
+            {
+                wishlistCount = await WishlistService.GetWishlistCountAsync();
+            }
+        
+
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                wishlistCount = await WishlistService.GetWishlistCountAsync();
+                StateHasChanged();
+            }
+        }
     protected override async Task OnInitializedAsync()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -134,14 +165,6 @@
         CartService.CartChanged -= UpdateCartCount;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await UpdateCartCountAsync();
-            StateHasChanged();
-        }
-    }
 
 }
 
