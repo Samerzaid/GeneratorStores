@@ -1,4 +1,5 @@
-﻿@page "/Checkout"
+﻿@page "/checkout"
+@using GeneratorStores.DataAccess.Dtos
 @using GeneratorStores.DataAccess.Entities
 @using GeneratorStores.DataAccess.Services
 @inject ICartService CartService
@@ -6,6 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthProvider
 
 <h1 class="text-center my-4">Checkout</h1>
 
@@ -58,12 +60,26 @@
 
         <div class="text-center mt-4">
             <h4 class="fw-bold">
-                Total: $@products.Sum(p => p.FinalPrice).ToString("0.00")
+                Total: $@TotalPrice.ToString("0.00")
             </h4>
 
-            <PayPalCheckout Products="@products" />
-
+            @if (isPlacingOrder)
+            {
+                <div class="mt-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processing order...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mt-3">
+                    <p class="fw-semibold mb-2">Proceed to Payment:</p>
+                    <div id="paypal-button-container"></div>
+                </div>
+            }
         </div>
+
     }
     else
     {
@@ -74,36 +90,118 @@
 @code {
     private List<DataAccess.Entities.Product> products = new();
     private bool isLoading = true;
+    private bool isPlacingOrder = false;
+
+    private double TotalPrice => products.Sum(p => p.FinalPrice);
+ 
+    private DotNetObjectReference<Checkout>? dotNetHelper;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetHelper = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("renderPayPalButtons", TotalPrice, dotNetHelper);
+        }
+    }
+
+    [JSInvokable]
+    public async Task PlaceOrderAfterPayment()
+    {
+        await PlaceOrder();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProducts();
     }
 
+
+
     private async Task LoadProducts()
     {
-        isLoading = true;
-
-        var uri = NavigationManager.Uri;
-        var query = new Uri(uri).Query;
-        var productIds = System.Web.HttpUtility.ParseQueryString(query).GetValues("productIds")
-            ?.Select(int.Parse).ToList();
-
-        if (productIds != null && productIds.Any())
+        try
         {
-            var allCartItems = (await CartService.GetCartItems()).ToList();
-            products = allCartItems.Where(p => productIds.Contains(p.Id)).ToList();
-        }
+            isLoading = true;
 
-        isLoading = false;
+            var uri = NavigationManager.Uri;
+            var query = new Uri(uri).Query;
+            var productIds = System.Web.HttpUtility.ParseQueryString(query)
+                ?.GetValues("productIds")
+                ?.Select(int.Parse)
+                .ToList();
+
+            if (productIds != null && productIds.Any())
+            {
+                var allCartItems = (await CartService.GetCartItems()).ToList();
+                products = allCartItems.Where(p => productIds.Contains(p.Id)).ToList();
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task PlaceOrder()
     {
-        await OrderService.PlaceOrderAsync(products);
-        await JSRuntime.InvokeVoidAsync("alert", "Your order has been placed successfully!");
-        NavigationManager.NavigateTo("/"); // Redirect to homepage
+        if (!products.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "No products to order.");
+            return;
+        }
+
+        isPlacingOrder = true;
+
+        try
+        {
+            // 1. Get the currently logged-in user
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity is not { IsAuthenticated: true })
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "You must be logged in to place an order.");
+                return;
+            }
+
+            // 2. Find the user's ID (NameIdentifier claim)
+            var userId = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "User ID not found.");
+                return;
+            }
+
+            // 3. Create CreateOrderDto
+            var createOrderDto = new CreateOrderDto
+            {
+                CustomerId = userId,
+                ProductIds = products.Select(p => p.Id).ToList(),
+                Status = "Approved"
+
+            };
+
+            // 4. Call your OrderService
+            await OrderService.CreateOrderFromDtoAsync(createOrderDto);
+
+            // 5. Clear cart after placing order
+            await CartService.ClearCart();
+
+            NavigationManager.NavigateTo("/order-success"); 
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Order failed: {ex.Message}");
+        }
+        finally
+        {
+            isPlacingOrder = false;
+        }
     }
+
+
 }
 
 <style>
@@ -122,6 +220,33 @@
     }
 </style>
 
-    
+            
 
-    
+        
+<script src="https://www.paypal.com/sdk/js?client-id=ARe7rF6qH6iS70Lgns_GDjEX1_yQTbsThFXPOf4-P-80Kq4flpSnmAD-tQY8k0DcS7Uj706vR69yshPM&currency=USD"></script>
+
+<script>
+    window.renderPayPalButtons = function (totalAmount, dotNetHelper) {
+        paypal.Buttons({
+            createOrder: function (data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            value: totalAmount.toFixed(2)
+                        }
+                    }]
+                });
+            },
+            onApprove: function (data, actions) {
+                return actions.order.capture().then(function (details) {
+                    console.log('Transaction completed by ' + details.payer.name.given_name);
+                    dotNetHelper.invokeMethodAsync('PlaceOrderAfterPayment');
+                });
+            },
+            onError: function (err) {
+                console.error(err);
+                alert('Payment could not be completed.');
+            }
+        }).render('#paypal-button-container');
+    }
+</script>

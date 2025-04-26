@@ -1,6 +1,8 @@
 ﻿using GeneratorStores.DataAccess.Dtos;
 using GeneratorStores.DataAccess.Entities;
 using GeneratorStores.DataAccess.Interfaces;
+using GeneratorStores.DataAccess.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -14,11 +16,13 @@ public class OrdersController : ControllerBase
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IEmailService _emailService;
 
-    public OrdersController(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager)
+    public OrdersController(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager, IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _userManager = userManager;
+        _emailService = emailService;
     }
 
     [HttpGet]
@@ -80,6 +84,7 @@ public class OrdersController : ControllerBase
             User = user,
             TotalPrice = totalPrice,
             OrderDate = DateTime.UtcNow,
+            Status = "Approved", // ✅ Force the Status to Approved here
             ProductsInOrder = products.Select(p => new ProductOrder
             {
                 ProductId = p.Id,
@@ -92,8 +97,70 @@ public class OrdersController : ControllerBase
         await _unitOfWork.Orders.AddAsync(order);
         await _unitOfWork.CompleteAsync();
 
+        var emailBody = $"""
+<table style="width: 100%; max-width: 700px; margin: auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; border: 1px solid #e0e0e0; padding: 20px; background-color: #f9f9f9;">
+    <tr>
+        <td style="text-align: center;">
+            <h2 style="color: #4CAF50;">Thank You for Your Order, {user.FullName}!</h2>
+            <p style="font-size: 16px; color: #555;">We're getting your order ready to ship. We will notify you when it has been sent.</p>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="padding: 20px 0;">
+            <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 8px; color: #333;">Order Summary</h3>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead style="background-color: #eee;">
+                    <tr>
+                        <th style="text-align: left; padding: 8px;">Product</th>
+                        <th style="text-align: center; padding: 8px;">Quantity</th>
+                        <th style="text-align: right; padding: 8px;">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {string.Join("", order.ProductsInOrder.Select(p => $"""
+                        <tr style="border-top: 1px solid #ddd;">
+                            <td style="padding: 8px;">{p.ProductName}</td>
+                            <td style="padding: 8px; text-align: center;">{p.Amount}</td>
+                            <td style="padding: 8px; text-align: right;">${p.UnitPrice.ToString("0.00")}</td>
+                        </tr>
+                    """))}
+                </tbody>
+            </table>
+
+            <p style="margin-top: 20px; font-size: 16px;">
+                <strong>Order ID:</strong> {order.Id}<br/>
+                <strong>Order Date:</strong> {order.OrderDate:MMMM dd, yyyy - HH:mm}<br/>
+                <strong>Status:</strong> {order.Status}<br/>
+                <strong>Total:</strong> <span style="color: #4CAF50;">${order.TotalPrice.ToString("0.00")}</span>
+            </p>
+        </td>
+    </tr>
+
+    <tr>
+        <td style="text-align: center; padding-top: 30px;">
+            <p style="font-size: 15px; color: #777;">If you have any questions, reply to this email.</p>
+            <p style="font-size: 15px; color: #777;">Thank you for shopping with <strong>Shop</strong>!</p>
+        </td>
+    </tr>
+</table>
+""";
+
+
+
+        await _emailService.SendEmailAsync(
+            to: user.Email,
+            subject: "🛒 Order Confirmation - Shop",
+            body: emailBody
+        );
+
+
+
         return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
     }
+
+
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order order)
@@ -140,6 +207,8 @@ public class OrdersController : ControllerBase
 
         return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
     }
+
+   
 
 
 }

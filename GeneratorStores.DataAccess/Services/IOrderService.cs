@@ -1,4 +1,5 @@
-﻿using GeneratorStores.DataAccess.Entities;
+﻿using GeneratorStores.DataAccess.Dtos;
+using GeneratorStores.DataAccess.Entities;
 
 namespace GeneratorStores.DataAccess.Services;
 
@@ -10,7 +11,8 @@ public interface IOrderService
     Task CreateOrderAsync(Order order);
     Task UpdateOrderAsync(Order order);
     Task DeleteOrderAsync(int id);
-    Task PlaceOrderAsync(IEnumerable<Product> products);
+    Task CreateOrderFromDtoAsync(CreateOrderDto createOrderDto);
+
 
 }
 

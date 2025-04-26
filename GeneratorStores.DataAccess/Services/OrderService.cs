@@ -61,33 +61,16 @@ public class OrderService : IOrderService
         response.EnsureSuccessStatusCode();
     }
 
-    // Used for regular checkout (not PayPal) – sends CreateOrderDto
-    public async Task PlaceOrderAsync(IEnumerable<Product> products)
+
+
+
+    public async Task CreateOrderFromDtoAsync(CreateOrderDto createOrderDto)
     {
-        var productIds = products.Select(p => p.Id).ToList();
-
-        var userResponse = await _httpClient.GetAsync("api/Users/current");
-        if (!userResponse.IsSuccessStatusCode)
-        {
-            throw new Exception("Failed to fetch the current user.");
-        }
-
-        var currentUser = await userResponse.Content.ReadFromJsonAsync<ApplicationUser>();
-        if (currentUser == null)
-        {
-            throw new Exception("Current user could not be determined.");
-        }
-
-        var createOrderDto = new CreateOrderDto
-        {
-            CustomerId = currentUser.Id,
-            ProductIds = productIds
-        };
-
-        // 🛠 Update endpoint to match your controller
-        var response = await _httpClient.PostAsJsonAsync("api/Orders/dto", createOrderDto);
+        var response = await _httpClient.PostAsJsonAsync("api/orders/dto", createOrderDto);
         response.EnsureSuccessStatusCode();
     }
+
+
 }
 
 

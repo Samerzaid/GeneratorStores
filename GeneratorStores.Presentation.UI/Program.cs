@@ -76,6 +76,8 @@ builder.Services.AddHttpClient<IOrderService, OrderService>(client =>
     client.BaseAddress = new Uri("http://localhost:5013");
 });
 
+
+
 builder.Services.AddHttpClient<ICategoryService, CategoryService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5013"); // Backend API base URL
@@ -102,6 +104,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://
 
 builder.Services.AddScoped<UserService>();
 
+builder.Services.AddHttpClient(); // just basic HttpClient
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
