@@ -1,0 +1,297 @@
+﻿@page "/Product/{ProductId:int}"
+@using GeneratorStores.DataAccess.Entities
+@using GeneratorStores.DataAccess.Services
+@inject IProductService ProductService
+@inject ICartService CartService
+@inject ICategoryService CategoryService
+@inject IReviewService ReviewService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter] public int ProductId { get; set; }
+    private DataAccess.Entities.Product product;
+    private List<DataAccess.Entities.Review> reviews = new();
+    private bool isLoading = true;
+    private bool isLoadingReviews = true;
+    private string categoryName = "";
+    private string userId;
+    private Dictionary<int, Review> newReviews = new(); // One review for current product
+    private bool showAddReviewForm = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await ProductService.GetProductByIdAsync(ProductId);
+
+        if (product != null)
+        {
+            var categories = await CategoryService.GetCategoriesWithProductsAsync();
+            var category = categories.FirstOrDefault(c => c.Products.Any(p => p.Id == product.Id));
+            if (category != null)
+            {
+                categoryName = category.Name;
+            }
+
+            reviews = (await ReviewService.GetReviewsByProductIdAsync(ProductId))
+                      .OrderByDescending(r => r.CreatedAt)
+                      .ToList();
+        }
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
+        isLoading = false;
+        isLoadingReviews = false;
+    }
+
+    private Review GetOrCreateReview()
+    {
+        if (!newReviews.ContainsKey(ProductId))
+        {
+            newReviews[ProductId] = new Review
+            {
+                ProductId = ProductId,
+                Rating = 0,
+                Comment = ""
+            };
+        }
+
+        return newReviews[ProductId];
+    }
+
+    private async Task SubmitReview()
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "You must be logged in to submit a review.");
+            return;
+        }
+
+        var review = GetOrCreateReview();
+
+        if (review.Rating < 1 || review.Rating > 5)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select a rating between 1 and 5.");
+            return;
+        }
+
+        review.UserId = userId;
+        review.CreatedAt = DateTime.UtcNow;
+
+        await ReviewService.AddReviewAsync(review);
+
+        // Refresh reviews
+        reviews = (await ReviewService.GetReviewsByProductIdAsync(ProductId))
+            .OrderByDescending(r => r.CreatedAt)
+            .ToList();
+
+        newReviews.Remove(ProductId);
+        showAddReviewForm = false;
+    }
+
+
+
+    private async Task AddToCart()
+    {
+        if (product != null)
+        {
+            await CartService.AddToCart(product);
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/Products");
+    }
+
+    private void SetRating(int rating)
+    {
+        GetOrCreateReview().Rating = rating;
+    }
+
+}
+
+@if (isLoading)
+{
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (product != null)
+{
+    <div class="container my-5">
+        <button class="btn btn-outline-secondary mb-4" @onclick="GoBack">
+            <i class="fas fa-arrow-left"></i> Back to Products
+        </button>
+
+        <div class="row align-items-center g-5">
+            <div class="col-md-6 text-center">
+                <img src="images/@product.ImageName" alt="@product.ProductName" class="img-fluid rounded-4 shadow-sm" style="max-height:450px; object-fit:contain;" />
+            </div>
+
+            <div class="col-md-6">
+                <h2 class="fw-bold">@product.ProductName</h2>
+
+                <div class="d-flex align-items-center mb-2">
+                    <div class="text-warning">
+                        @if (reviews.Any())
+                        {
+                            var averageRating = reviews.Average(r => r.Rating);
+                            @for (int i = 0; i < Math.Floor(averageRating); i++)
+                            {
+                                <i class="fas fa-star"></i>
+                            }
+                            @for (int i = (int)Math.Floor(averageRating); i < 5; i++)
+                            {
+                                <i class="far fa-star"></i>
+                            }
+                        }
+                        else
+                        {
+                            @for (int i = 0; i < 5; i++)
+                            {
+                                <i class="far fa-star"></i>
+                            }
+                        }
+                    </div>
+
+                    <small class="ms-2 text-muted">
+                        (@reviews.Count Reviews)
+                    </small>
+                </div>
+
+                <h3 class="fw-bold text-success mb-3">
+                    $@product.FinalPrice.ToString("0.00")
+                </h3>
+
+                <p class="text-muted">@product.ProductDescription</p>
+
+                <div class="d-flex align-items-center my-4">
+                    <button class="btn btn-primary btn-lg" @onclick="AddToCart">
+                        <i class="fas fa-cart-plus me-2"></i> Add to Cart
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(categoryName))
+                {
+                    <p class="text-muted mt-3">
+                         <strong>@categoryName</strong>
+                    </p>
+                }
+            </div>
+        </div>
+
+        @* Reviews Section *@
+        @if (!isLoadingReviews)
+        {
+            <div class="mt-5">
+                <h4 class="fw-bold">All Reviews</h4>
+
+                @if (reviews.Any())
+                {
+                    <ul class="list-unstyled">
+                        @foreach (var review in reviews)
+                        {
+                            <li class="border-bottom py-3">
+                                <div class="fw-bold">@review.User.FullName</div>
+                                <div class="text-warning mb-1">
+                                    @for (int i = 0; i < review.Rating; i++)
+                                    {
+                                        <i class="fas fa-star"></i>
+                                    }
+                                    @for (int i = review.Rating; i < 5; i++)
+                                    {
+                                        <i class="far fa-star"></i>
+                                    }
+                                </div>
+                                <p class="mb-0">@review.Comment</p>
+                                <small class="text-muted">@review.CreatedAt.ToString("MMMM dd, yyyy")</small>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted">No reviews yet for this product.</p>
+                }
+            </div>
+        }
+        
+        @if (!string.IsNullOrWhiteSpace(userId))
+        {
+            <div class="mt-5">
+                <h4 class="fw-bold">Leave a Review</h4>
+
+                @if (!showAddReviewForm)
+                {
+                    <button class="btn btn-outline-success" @onclick="() => showAddReviewForm = true">
+                        <i class="fas fa-pen me-2"></i> Write a Review
+                    </button>
+                }
+                else
+                {
+                    <div class="review-form bg-light p-4 rounded-4 shadow-sm mt-3">
+                        <div class="mb-3">
+                            <textarea class="form-control" rows="4" placeholder="Write your comment here..."
+                              @bind="GetOrCreateReview().Comment"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Rating</label>
+                            <select class="form-select w-50" @bind="GetOrCreateReview().Rating">
+                                <option value="">Select rating</option>
+                                <option value="1">⭐</option>
+                                <option value="2">⭐⭐</option>
+                                <option value="3">⭐⭐⭐</option>
+                                <option value="4">⭐⭐⭐⭐</option>
+                                <option value="5">⭐⭐⭐⭐⭐</option>
+                            </select>
+                        </div>
+
+
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success flex-grow-1" @onclick="SubmitReview">
+                                <i class="fas fa-paper-plane me-2"></i> Submit Review
+                            </button>
+                            <button class="btn btn-outline-secondary flex-grow-1" @onclick="() => showAddReviewForm = false">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+}
+else
+{
+    <p class="text-center text-danger mt-5">Product not found.</p>
+}
+
+<style>
+    .btn-primary {
+        background-color: #007bff;
+        border: none;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+</style>
+
+    
