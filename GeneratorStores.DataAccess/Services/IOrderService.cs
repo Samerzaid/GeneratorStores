@@ -13,6 +13,9 @@ public interface IOrderService
     Task DeleteOrderAsync(int id);
     Task CreateOrderFromDtoAsync(CreateOrderDto createOrderDto);
 
+    Task<int> GetTotalOrdersAsync();
+    Task<decimal> GetTotalSalesAsync();
+    Task<IEnumerable<SalesOverTimeDto>> GetSalesOverTimeAsync();
 
 }
 

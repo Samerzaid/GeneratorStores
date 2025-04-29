@@ -71,6 +71,22 @@ public class OrderService : IOrderService
     }
 
 
+    public async Task<int> GetTotalOrdersAsync()
+    {
+        return await _httpClient.GetFromJsonAsync<int>("api/orders/stats/total-orders");
+    }
+
+    public async Task<decimal> GetTotalSalesAsync()
+    {
+        return await _httpClient.GetFromJsonAsync<decimal>("api/orders/stats/total-sales");
+    }
+
+    public async Task<IEnumerable<SalesOverTimeDto>> GetSalesOverTimeAsync()
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<SalesOverTimeDto>>("api/orders/stats/sales-over-time");
+    }
+
+
 }
 
 

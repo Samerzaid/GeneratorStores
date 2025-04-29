@@ -180,7 +180,7 @@
 
         await ReviewService.AddReviewAsync(newReview);
 
-        // Refresh list
+        // Refresh lis
         reviewList = (await ReviewService.GetAllReviewsAsync()).ToList();
         newReview = new Review(); // Reset form
         showAddReviewForm = false;

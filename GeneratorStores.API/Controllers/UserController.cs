@@ -34,7 +34,8 @@ public class UsersController : ControllerBase
             u.Id,
             u.UserName,
             u.Email,
-            u.FullName
+            u.FullName,
+            u.CreatedAt
         }).ToList();
 
         return Ok(users);
@@ -54,7 +55,8 @@ public class UsersController : ControllerBase
             user.Id,
             user.UserName,
             user.Email,
-            user.FullName
+            user.FullName,
+            user.CreatedAt
         });
     }
 

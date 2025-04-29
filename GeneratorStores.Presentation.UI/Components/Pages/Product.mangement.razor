@@ -10,57 +10,56 @@
 @inject IProductService ProductService
 
 <h1 class="text-center my-4 fw-bold">
-    <i class="fas fa-cubes"></i>	 Product Management
+    <i class="fas fa-cubes"></i> Product Management
 </h1>
 
 <div class="container">
-    <!-- Top Section: Add Product and Search -->
+    <!-- Top Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <button class="btn btn-success d-flex align-items-center" @onclick="ShowCreateForm">
+        <button class="btn btn-success d-flex align-items-center rounded-pill px-4" @onclick="ShowCreateForm">
             <i class="fas fa-plus-circle me-2"></i> Add Product
         </button>
         <div class="input-group w-50">
-            <span class="input-group-text"><i class="fas fa-search"></i></span>
-            <input type="text" class="form-control" @bind="searchTerm" placeholder="Search products..." @oninput="OnSearchTermChanged" />
+            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control border-start-0" @bind="searchTerm" placeholder="Search products..." @oninput="OnSearchTermChanged" />
         </div>
     </div>
 
-    <!-- Loading Spinner -->
     @if (isLoading)
     {
         <div class="text-center my-5">
-            <div class="spinner-border text-primary" role="status">
+            <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
+            <p class="mt-3 text-muted">Loading products...</p>
         </div>
     }
     else if (filteredProducts.Any())
     {
-        <!-- Product Cards -->
-        <div class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
             @foreach (var product in filteredProducts)
             {
                 <div class="col">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="product-title text-dark">@product.ProductName</h5>
-                            <p class="fw-bold text-success">Price: $@product.Price</p>
+                    <div class="card h-100 shadow rounded-4 border-0 position-relative product-card">
+                        <div class="card-body text-center">
+                            <h5 class="product-title mb-2 fw-bold">@product.ProductName</h5>
+                            <p class="text-success fw-semibold fs-5">$@product.Price</p>
                             @if (product.Discount.HasValue && product.Discount > 0)
                             {
-                                <p class="text-danger">Discount: @product.Discount.Value%</p>
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">-@product.Discount.Value%</span>
                             }
-                            <p class="text-secondary">Stock: @product.AmountOfProduct</p>
                             @if (!string.IsNullOrEmpty(product.ImageName))
                             {
-                                <img src="images/@product.ImageName" alt="Product Image" class="img-fluid rounded mt-2" style="max-height: 150px; object-fit: contain;" />
+                                <img src="images/@product.ImageName" alt="Product Image" class="img-fluid rounded mt-2" style="height: 150px; object-fit: contain;" />
                             }
+                            <p class="small text-muted mt-2">Stock: @product.AmountOfProduct</p>
                         </div>
-                        <div class="card-footer bg-white border-0 d-flex justify-content-between">
-                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ShowEditForm(product)">
-                                <i class="fas fa-edit"></i> Edit
+                        <div class="card-footer d-flex justify-content-around border-0 bg-white">
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3" @onclick="() => ShowEditForm(product)">
+                                <i class="fas fa-edit me-1"></i> Edit
                             </button>
-                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteProduct(product.Id)">
-                                <i class="fas fa-trash"></i> Delete
+                            <button class="btn btn-outline-danger btn-sm rounded-pill px-3" @onclick="() => DeleteProduct(product.Id)">
+                                <i class="fas fa-trash me-1"></i> Delete
                             </button>
                         </div>
                     </div>
@@ -73,59 +72,47 @@
         <p class="text-center text-muted">No products found.</p>
     }
 
-    <!-- Modal for Create/Edit Product -->
     @if (isFormVisible)
     {
         <div class="modal fade show d-block" tabindex="-1">
             <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
+                <div class="modal-content rounded-4 shadow-lg">
+                    <div class="modal-header bg-gradient-primary text-white rounded-top-4">
                         <h5 class="modal-title">@modalTitle</h5>
                         <button type="button" class="btn-close" @onclick="CloseForm"></button>
                     </div>
                     <div class="modal-body">
                         <EditForm Model="currentProduct" OnValidSubmit="SaveProduct">
-                            <div class="mb-3">
-                                <label class="form-label">Product Name</label>
-                                <InputText class="form-control" @bind-Value="currentProduct.ProductName" />
+                            <div class="form-floating mb-3">
+                                <InputText class="form-control" id="productName" @bind-Value="currentProduct.ProductName" placeholder="Product Name" />
+                                <label for="productName">Product Name</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <InputText class="form-control" id="productDescription" @bind-Value="currentProduct.ProductDescription" placeholder="Description" />
+                                <label for="productDescription">Description</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <InputNumber class="form-control" id="productPrice" @bind-Value="currentProduct.Price" placeholder="Price" />
+                                <label for="productPrice">Price</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <InputNumber class="form-control" id="amount" @bind-Value="currentProduct.AmountOfProduct" placeholder="Amount" />
+                                <label for="amount">Amount</label>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <InputText class="form-control" @bind-Value="currentProduct.ProductDescription" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Price</label>
-                                <InputNumber class="form-control" @bind-Value="currentProduct.Price" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Amount</label>
-                                <InputNumber class="form-control" @bind-Value="currentProduct.AmountOfProduct" />
-                            </div>
-
-                            <!-- Image Upload -->
-                            <div class="mb-3">
-                                <label class="form-label">Upload Product Image</label>
+                                <label class="form-label fw-bold">Upload Product Image</label>
                                 <InputFile OnChange="OnImageSelected" class="form-control" />
+                                @if (!string.IsNullOrWhiteSpace(currentProduct.ImageName))
+                                {
+                                    <img src="images/@currentProduct.ImageName" alt="Preview" class="img-thumbnail mt-2" style="max-height: 150px;" />
+                                }
                             </div>
-
-                            @if (!string.IsNullOrWhiteSpace(currentProduct.ImageName))
-                            {
-                                <div class="text-center mb-3">
-                                    <img src="images/@currentProduct.ImageName" alt="Preview" class="img-thumbnail" style="max-height: 150px;" />
-                                </div>
-                            }
-
-                            <!-- Discount -->
-                            <div class="mb-3">
-                                <label class="form-label">Discount (%)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-percent"></i></span>
-                                    <InputNumber class="form-control" @bind-Value="currentProduct.Discount" placeholder="e.g. 10" />
-                                </div>
+                            <div class="form-floating mb-3">
+                                <InputNumber class="form-control" id="discount" @bind-Value="currentProduct.Discount" placeholder="Discount" />
+                                <label for="discount">Discount (%)</label>
                             </div>
-
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-save"></i> Save
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 mt-2">
+                                <i class="fas fa-save me-2"></i> Save
                             </button>
                         </EditForm>
                     </div>
@@ -135,6 +122,14 @@
         <div class="modal-backdrop fade show"></div>
     }
 </div>
+
+<style>
+    .product-card:hover {
+        transform: translateY(-5px);
+        transition: 0.3s;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+</style>
 
 @code {
     private List<DataAccess.Entities.Product> products = new();

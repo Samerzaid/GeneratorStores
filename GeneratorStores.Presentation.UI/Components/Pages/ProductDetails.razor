@@ -9,6 +9,7 @@
 @rendermode InteractiveServer
 @inject AuthenticationStateProvider AuthProvider
 @inject IJSRuntime JSRuntime
+@inject IWishlistService WishlistService
 
 @code {
     [Parameter] public int ProductId { get; set; }
@@ -20,6 +21,7 @@
     private string userId;
     private Dictionary<int, Review> newReviews = new(); // One review for current product
     private bool showAddReviewForm = false;
+    private bool isInWishlist = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -42,9 +44,39 @@
         var user = authState.User;
         userId = user?.FindFirst("sub")?.Value ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
 
+      
         isLoading = false;
         isLoadingReviews = false;
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var wishlist = await WishlistService.GetWishlistAsync();
+                isInWishlist = wishlist.Contains(product.Id);
+                StateHasChanged(); // re-render the page after getting wishlist
+            }
+        }
+    }
+
+
+    private async Task ToggleWishlist()
+    {
+        if (isInWishlist)
+        {
+            await WishlistService.RemoveFromWishlistAsync(product.Id);
+            isInWishlist = false;
+        }
+        else
+        {
+            await WishlistService.AddToWishlistAsync(product.Id);
+            isInWishlist = true;
+        }
+    }
+
 
     private Review GetOrCreateReview()
     {
@@ -175,6 +207,13 @@ else if (product != null)
                         <i class="fas fa-cart-plus me-2"></i> Add to Cart
                     </button>
                 </div>
+                <div class="d-flex align-items-center my-2">
+                    <button class="btn btn-outline-danger btn-lg" @onclick="ToggleWishlist">
+                        <i class="fas @(isInWishlist ? "fa-heart" : "fa-heart") me-2"></i> 
+                        @(isInWishlist ? "Remove from Wishlist" : "Add to Wishlist")
+                    </button>
+                </div>
+
 
                 @if (!string.IsNullOrWhiteSpace(categoryName))
                 {
@@ -294,4 +333,5 @@ else
     }
 </style>
 
+    
     

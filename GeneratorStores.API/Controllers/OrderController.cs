@@ -208,10 +208,44 @@ public class OrdersController : ControllerBase
         return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
     }
 
-   
+
+    [HttpGet("stats/total-orders")]
+    public async Task<IActionResult> GetTotalOrders()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+        var totalOrders = orders.Count();
+        return Ok(totalOrders);
+    }
+
+    [HttpGet("stats/total-sales")]
+    public async Task<IActionResult> GetTotalSales()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+        var totalSales = orders.Sum(o => o.TotalPrice);
+        return Ok(totalSales);
+    }
+
+    [HttpGet("stats/sales-over-time")]
+    public async Task<IActionResult> GetSalesOverTime()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+
+        var salesOverTime = orders
+            .GroupBy(o => o.OrderDate.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                TotalSales = g.Sum(o => o.TotalPrice)
+            })
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        return Ok(salesOverTime);
+    }
 
 
 }
+
 
 
 

@@ -14,10 +14,7 @@ namespace GeneratorStores.DataAccess
         public DbSet<CategoryProduct> CategoryProducts { get; set; }
         public DbSet<Review> Reviews { get; set; } // Add Reviews table
         public DbSet<Banner> Banners { get; set; }
-        //public DbSet<BestSellingFinal> BestSellingFinals { get; set; }
-        //public DbSet<BestSellingTemp> BestSellingTemps { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
-        //public DbSet<Menu> Menus { get; set; }
 
 
 
