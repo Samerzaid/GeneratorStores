@@ -13,24 +13,32 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Resend email confirmation</PageTitle>
+<PageTitle>Resend Email Confirmation</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
-<hr />
-<StatusMessage Message="@message" />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" class="form-control" aria-required="true" placeholder="name@example.com" />
-                <label for="email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+<div class="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+    <div class="card shadow-lg border-0 p-4" style="max-width: 500px; width: 100%; border-radius: 1rem;">
+        <div class="card-body">
+            <h2 class="card-title text-center mb-4">Resend Email Confirmation</h2>
+            <p class="text-muted text-center mb-4">Enter your email to receive the confirmation link again.</p>
+
+            <StatusMessage Message="@message" />
+            <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="form-floating mb-4">
+                    <InputText @bind-Value="Input.Email" id="email" class="form-control" placeholder="name@example.com" />
+                    <label for="email">Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2" style="border-radius: 0.5rem;">Resend Confirmation</button>
+            </EditForm>
+
+            <div class="mt-4 text-center">
+                <a href="/" class="text-decoration-none text-secondary">← Back to Home</a>
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
-        </EditForm>
+        </div>
     </div>
 </div>
 
@@ -67,5 +75,3 @@
         public string Email { get; set; } = "";
     }
 }
-
-            
