@@ -87,6 +87,17 @@ public class OrderService : IOrderService
     }
 
 
+    public async Task<decimal> GetTodaySalesAsync()
+    {
+        return await _httpClient.GetFromJsonAsync<decimal>("api/orders/stats/today-sales");
+    }
+
+    public async Task<decimal> GetMonthSalesAsync()
+    {
+        return await _httpClient.GetFromJsonAsync<decimal>("api/orders/stats/month-sales");
+    }
+
+
 }
 
 

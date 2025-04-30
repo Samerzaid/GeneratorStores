@@ -134,9 +134,26 @@ namespace GeneratorStores.API.Controllers
             await _unitOfWork.CompleteAsync();
             return Ok("Products successfully added to the category.");
         }
+
+
+        // DELETE: api/category/{categoryId}/product/{productId}
+        [HttpDelete("{categoryId}/product/{productId}")]
+        public async Task<IActionResult> RemoveProductFromCategory(int categoryId, int productId)
+        {
+            var relation = await _unitOfWork.CategoryProducts.GetByCategoryAndProductIdAsync(categoryId, productId);
+            if (relation == null)
+                return NotFound("Relation not found.");
+
+            await _unitOfWork.CategoryProducts.DeleteAsync(relation.Id);
+            await _unitOfWork.CompleteAsync();
+
+            return NoContent();
+        }
+
     }
 
 }
+
 
 
 

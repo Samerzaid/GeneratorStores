@@ -58,6 +58,13 @@ public class CategoryService : ICategoryService
         var response = await _httpClient.PostAsJsonAsync("api/category/add-products", payload);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task RemoveProductFromCategoryAsync(int categoryId, int productId)
+    {
+        var response = await _httpClient.DeleteAsync($"api/category/{categoryId}/product/{productId}");
+        response.EnsureSuccessStatusCode();
+    }
+
 }
 
 

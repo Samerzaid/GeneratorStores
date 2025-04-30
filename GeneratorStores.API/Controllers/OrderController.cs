@@ -141,7 +141,7 @@ public class OrdersController : ControllerBase
     <tr>
         <td style="text-align: center; padding-top: 30px;">
             <p style="font-size: 15px; color: #777;">If you have any questions, reply to this email.</p>
-            <p style="font-size: 15px; color: #777;">Thank you for shopping with <strong>Shop</strong>!</p>
+            <p style="font-size: 15px; color: #777;">Thank you for shopping with <strong>Zalando-Phones</strong>!</p>
         </td>
     </tr>
 </table>
@@ -151,7 +151,7 @@ public class OrdersController : ControllerBase
 
         await _emailService.SendEmailAsync(
             to: user.Email,
-            subject: "🛒 Order Confirmation - Shop",
+            subject: "🛒 Order Confirmation - Zalando-Phones",
             body: emailBody
         );
 
@@ -241,6 +241,29 @@ public class OrdersController : ControllerBase
             .ToList();
 
         return Ok(salesOverTime);
+    }
+
+
+    [HttpGet("stats/today-sales")]
+    public async Task<IActionResult> GetTodaySales()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+        var today = DateTime.UtcNow.Date;
+        var todaySales = orders
+            .Where(o => o.OrderDate.Date == today)
+            .Sum(o => o.TotalPrice);
+        return Ok(todaySales);
+    }
+
+    [HttpGet("stats/month-sales")]
+    public async Task<IActionResult> GetMonthSales()
+    {
+        var orders = await _unitOfWork.Orders.GetAllAsync();
+        var now = DateTime.UtcNow;
+        var monthSales = orders
+            .Where(o => o.OrderDate.Month == now.Month && o.OrderDate.Year == now.Year)
+            .Sum(o => o.TotalPrice);
+        return Ok(monthSales);
     }
 
 

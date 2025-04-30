@@ -55,5 +55,11 @@ public class CategoryProductRepository : ICategoryProductRepository
             _context.CategoryProducts.Remove(categoryProduct);
         }
     }
+
+    public async Task<CategoryProduct?> GetByCategoryAndProductIdAsync(int categoryId, int productId)
+    {
+        return await _context.CategoryProducts
+            .FirstOrDefaultAsync(cp => cp.CategoryId == categoryId && cp.ProductId == productId);
+    }
 }
 

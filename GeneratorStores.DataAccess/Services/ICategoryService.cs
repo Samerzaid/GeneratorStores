@@ -12,9 +12,11 @@ public interface ICategoryService
     Task UpdateCategoryAsync(Category category);
     Task DeleteCategoryAsync(int id);
     Task AddProductsToCategoryAsync(int categoryId, List<int> productIds);
+    Task RemoveProductFromCategoryAsync(int categoryId, int productId);
 
 
 }
+
 
 
 

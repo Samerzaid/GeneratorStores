@@ -17,15 +17,7 @@
 
 <!-- Cards Section -->
 <div class="dashboard-cards">
-
-    <div class="dashboard-card white-card">
-        <div class="dashboard-icon">
-            <i class="fas fa-shopping-cart"></i> <!-- Total Orders icon -->
-        </div>
-        <h3>Total Orders</h3>
-        <p>@totalOrders</p>
-    </div>
-
+    
     <div class="dashboard-card teal-card">
         <div class="dashboard-icon">
             <i class="fas fa-dollar-sign"></i> <!-- Total Sales icon -->
@@ -33,24 +25,30 @@
         <h3>Total Sales</h3>
         <p>$@totalSales.ToString("0.00")</p>
     </div>
-
-    <div class="dashboard-card orange-card">
+    
+    <div class="dashboard-card yellow-card">
         <div class="dashboard-icon">
-            <i class="fas fa-users"></i> <!-- Total Users icon -->
+            <i class="fas fa-coins"></i> <!-- Today Sales icon -->
         </div>
-        <h3>Total Users</h3>
-        <p>@totalUsers</p>
+        <h3>Today's Sales</h3>
+        <p>$@todaySales.ToString("0.00")</p>
     </div>
 
-    <div class="dashboard-card purple-card">
+    <div class="dashboard-card pink-card">
         <div class="dashboard-icon">
-            <i class="fas fa-box"></i> <!-- Total Products icon -->
+            <i class="fas fa-wallet"></i> <!-- Month Sales icon -->
         </div>
-        <h3>Total Products</h3>
-        <p>@totalProducts</p>
+        <h3>This Month's Sales</h3>
+        <p>$@monthSales.ToString("0.00")</p>
     </div>
-
-    <!-- ✅ New Cards -->
+    
+    <div class="dashboard-card white-card">
+        <div class="dashboard-icon">
+            <i class="fas fa-shopping-cart"></i> <!-- Total Orders icon -->
+        </div>
+        <h3>Total Orders</h3>
+        <p>@totalOrders</p>
+    </div>
 
     <div class="dashboard-card green-card">
         <div class="dashboard-icon">
@@ -67,13 +65,13 @@
         <h3>This Month's Orders</h3>
         <p>@monthOrders</p>
     </div>
-
-    <div class="dashboard-card red-card">
+    
+    <div class="dashboard-card orange-card">
         <div class="dashboard-icon">
-            <i class="fas fa-calendar"></i> <!-- Year Orders icon -->
+            <i class="fas fa-users"></i> <!-- Total Users icon -->
         </div>
-        <h3>This Year's Orders</h3>
-        <p>@yearOrders</p>
+        <h3>Total Users</h3>
+        <p>@totalUsers</p>
     </div>
     
     <div class="dashboard-card cyan-card">
@@ -83,6 +81,8 @@
         <h3>New Users</h3>
         <p>@newCustomersThisMonth</p>
     </div>
+    
+   
 
 
 </div>
@@ -148,10 +148,6 @@
         background: linear-gradient(to right, #f6ad55, #ed8936);
     }
 
-    .purple-card {
-        background: linear-gradient(to right, #9f7aea, #805ad5);
-    }
-
 
     .green-card {
         background: linear-gradient(to right, #48bb78, #38a169); /* green */
@@ -161,12 +157,19 @@
         background: linear-gradient(to right, #4299e1, #3182ce); /* blue */
     }
 
-    .red-card {
-        background: linear-gradient(to right, #f56565, #e53e3e); /* red */
-    }
+  
 
     .cyan-card {
         background: linear-gradient(to right, #06b6d4, #0ea5e9); /* cyan */
+    }
+
+    .yellow-card {
+        background: linear-gradient(to right, #ecc94b, #d69e2e); /* yellow */
+    }
+
+    .pink-card {
+        background: linear-gradient(to right, #ed64a6, #d53f8c); /* pink */
+    }
 
 </style>
 
@@ -174,24 +177,25 @@
     private int totalOrders;
     private decimal totalSales;
     private int totalUsers;
-    private int totalProducts;
     private int todayOrders;
     private int monthOrders;
-    private int yearOrders;
     private int newCustomersThisMonth;
+    private decimal todaySales;
+    private decimal monthSales;
     private IEnumerable<SalesOverTimeDto> salesOverTimeData = new List<SalesOverTimeDto>();
 
     protected override async Task OnInitializedAsync()
     {
         totalOrders = await OrderService.GetTotalOrdersAsync();
         totalSales = await OrderService.GetTotalSalesAsync();
+        todaySales = await OrderService.GetTodaySalesAsync();
+        monthSales = await OrderService.GetMonthSalesAsync();
+
         var users = await UserService.GetAllUsersAsync();
         totalUsers = users.Count();
         var now = DateTime.UtcNow;
         newCustomersThisMonth = users.Count(u => u.CreatedAt.Date == now.Date);
 
-        var products = await ProductService.GetAllProductsAsync();
-        totalProducts = products.Count();
 
         var allOrders = await OrderService.GetAllOrdersAsync();
 
@@ -202,7 +206,6 @@
         var thisYear = DateTime.UtcNow.Year;
 
         monthOrders = allOrders.Count(o => o.OrderDate.Month == thisMonth && o.OrderDate.Year == thisYear);
-        yearOrders = allOrders.Count(o => o.OrderDate.Year == thisYear);
 
         
         salesOverTimeData = await OrderService.GetSalesOverTimeAsync();

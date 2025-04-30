@@ -15,7 +15,11 @@
     <!-- Search -->
     <div class="d-flex justify-content-center mb-4">
         <input type="text" class="form-control w-75 rounded-pill px-4 py-2 shadow-sm"
-               placeholder="🔍 Search by name..." @bind="searchTerm" @oninput="FilterUsers" />
+               placeholder="🔍 Search by name, email, or username..." 
+               value="@searchTerm"
+               @oninput="DebounceSearch" />
+
+
     </div>
 
     <!-- Users Table -->
@@ -116,6 +120,8 @@
     private bool isLoading = true;
     private bool isFormVisible = false;
     private string searchTerm = string.Empty;
+    private Timer? debounceTimer;
+    private readonly int debounceDelay = 300;
 
     protected override async Task OnInitializedAsync()
     {
@@ -130,11 +136,32 @@
         isLoading = false;
     }
 
+    private void DebounceSearch(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+
+        debounceTimer?.Dispose();
+        debounceTimer = new Timer(_ =>
+        {
+            InvokeAsync(() => FilterUsers());
+        }, null, debounceDelay, Timeout.Infinite);
+    }
+
     private void FilterUsers()
     {
-        filteredUsers = string.IsNullOrWhiteSpace(searchTerm)
-            ? users
-            : users.Where(u => u.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredUsers = users;
+            return;
+        }
+
+        var lowerSearch = searchTerm.ToLower();
+
+        filteredUsers = users.Where(u =>
+            (!string.IsNullOrEmpty(u.FullName) && u.FullName.ToLower().Contains(lowerSearch)) ||
+            (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(lowerSearch)) ||
+            (!string.IsNullOrEmpty(u.UserName) && u.UserName.ToLower().Contains(lowerSearch))
+        ).ToList();
     }
 
     private void ShowEditUserForm(ApplicationUser user)
@@ -212,4 +239,5 @@
 
 </style>
 
+    
     

@@ -17,6 +17,10 @@ public interface IOrderService
     Task<decimal> GetTotalSalesAsync();
     Task<IEnumerable<SalesOverTimeDto>> GetSalesOverTimeAsync();
 
+    Task<decimal> GetTodaySalesAsync();
+    Task<decimal> GetMonthSalesAsync();
+
+
 }
 
 
