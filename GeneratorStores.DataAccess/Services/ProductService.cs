@@ -54,6 +54,34 @@ public class ProductService : IProductService
             .Take(count);
     }
 
+    public async Task<IEnumerable<Product>> GetRelatedProductsAsync(int currentProductId, int count = 4)
+    {
+        var allProducts = await GetAllProductsAsync();
+        var allCategories = await _httpClient.GetFromJsonAsync<IEnumerable<CategoryProduct>>("api/CategoryProducts");
+
+        // Get the categoryIds for the current product
+        var currentProductCategoryIds = allCategories
+            .Where(cp => cp.ProductId == currentProductId)
+            .Select(cp => cp.CategoryId)
+            .Distinct()
+            .ToList();
+
+        // Get related products in the same categories, excluding the current product
+        var relatedProductIds = allCategories
+            .Where(cp => currentProductCategoryIds.Contains(cp.CategoryId) && cp.ProductId != currentProductId)
+            .Select(cp => cp.ProductId)
+            .Distinct()
+            .ToList();
+
+        var relatedProducts = allProducts
+            .Where(p => relatedProductIds.Contains(p.Id))
+            .Take(count)
+            .ToList();
+
+        return relatedProducts;
+    }
+
+
 }
 
 

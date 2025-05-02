@@ -22,6 +22,7 @@
     private Dictionary<int, Review> newReviews = new(); // One review for current product
     private bool showAddReviewForm = false;
     private bool isInWishlist = false;
+    private List<DataAccess.Entities.Product> relatedProducts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -31,6 +32,7 @@
         {
             var categories = await CategoryService.GetCategoriesWithProductsAsync();
             var category = categories.FirstOrDefault(c => c.Products.Any(p => p.Id == product.Id));
+
             if (category != null)
             {
                 categoryName = category.Name;
@@ -39,6 +41,8 @@
             reviews = (await ReviewService.GetReviewsByProductIdAsync(ProductId))
                       .OrderByDescending(r => r.CreatedAt)
                       .ToList();
+            relatedProducts = (await ProductService.GetRelatedProductsAsync(ProductId)).ToList();
+
         }
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -224,6 +228,50 @@ else if (product != null)
             </div>
         </div>
 
+        @if (relatedProducts != null && relatedProducts.Any())
+        {
+            <section class="related-products py-5">
+                <div class="container">
+                    <h2 class="fw-bold mb-4" style="color: #4d594a;">RELATED PRODUCTS</h2>
+
+                    <div class="d-flex overflow-auto gap-4 pb-2">
+                        @foreach (var product in relatedProducts)
+                        {
+                            <a href="@($"/Product/{product.Id}")" class="text-decoration-none text-dark">
+                                <div class="product-card bg-white shadow-sm rounded-4 p-3" style="min-width: 250px; cursor: pointer;">
+                                    <div class="position-relative">
+                                        @if (product.Discount.HasValue && product.Discount > 0)
+                                        {
+                                            <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                                                -@product.Discount.Value% OFF
+                                            </span>
+                                        }
+
+                                        <img src="images/@product.ImageName" class="img-fluid rounded-3" style="height: 180px; object-fit: contain;" />
+                                    </div>
+                                    <h6 class="mt-3 fw-semibold">@product.ProductName</h6>
+                                    <p class="text-danger fw-bold mb-1">
+                                        $@product.FinalPrice.ToString("0.00")
+                                        @if (product.Discount.HasValue && product.Discount > 0)
+                                        {
+                                            <del class="text-muted fw-normal ms-1">$@product.Price.ToString("0.00")</del>
+                                        }
+                                    </p>
+                                    <button type="button"
+                                            class="btn btn-outline-primary w-100 fw-bold py-2 mt-2"
+                                            @onclick:stopPropagation="true"
+                                            @onclick="@(() => NavigationManager.NavigateTo($"/Product/{product.Id}"))">
+                                        View Details
+                                    </button>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
+        
+
         @* Reviews Section *@
         @if (!isLoadingReviews)
         {
@@ -312,6 +360,14 @@ else
     <p class="text-center text-danger mt-5">Product not found.</p>
 }
 
+
+
+
+
+
+
+
+
 <style>
     .btn-primary {
         background-color: #007bff;
@@ -331,6 +387,13 @@ else
     input[type="number"] {
         -moz-appearance: textfield;
     }
+
+    .card-img-top {
+        background-color: #f8f9fa;
+        object-fit: contain;
+        height: 200px;
+    }
+
 </style>
 
     

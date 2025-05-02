@@ -11,6 +11,7 @@ public interface IProductService
     Task DeleteProductAsync(int id);
     Task<IEnumerable<Product>> GetNewArrivalsAsync(int count = 6);
     Task<IEnumerable<Product>> GetOldArrivalsAsync(int count = 6);
+    Task<IEnumerable<Product>> GetRelatedProductsAsync(int currentProductId, int count = 6);
 
 
 }
