@@ -68,34 +68,49 @@ public class OrdersController : ControllerBase
 
     // ✅ Keep support for CreateOrderDto if needed
     [HttpPost("dto")]
-    public async Task<IActionResult> CreateOrderFromDto([FromBody] CreateOrderDto createOrderDto)
+public async Task<IActionResult> CreateOrderFromDto([FromBody] CreateOrderDto createOrderDto)
+{
+    if (!ModelState.IsValid) return BadRequest(ModelState);
+
+    var user = await _userManager.FindByIdAsync(createOrderDto.CustomerId);
+    if (user == null) return BadRequest($"User with ID {createOrderDto.CustomerId} not found.");
+
+    var products = new List<Product>();
+    foreach (var productId in createOrderDto.ProductIds)
     {
-        if (!ModelState.IsValid) return BadRequest(ModelState);
+        var product = await _unitOfWork.Products.GetByIdAsync(productId);
+        if (product == null)
+            return BadRequest($"Product with ID {productId} not found.");
 
-        var user = await _userManager.FindByIdAsync(createOrderDto.CustomerId);
-        if (user == null) return BadRequest($"User with ID {createOrderDto.CustomerId} not found.");
+        if (product.AmountOfProduct <= 0)
+            return BadRequest($"Product '{product.ProductName}' is out of stock.");
 
-        var products = createOrderDto.ProductIds.Select(id => _unitOfWork.Products.GetByIdAsync(id).Result).ToList();
-        var totalPrice = products.Sum(p => p.Price);
+        // Decrease the stock by 1 (or use Amount from DTO if quantity is supported)
+        product.AmountOfProduct -= 1;
+        await _unitOfWork.Products.UpdateAsync(product);
+        products.Add(product);
+    }
 
-        var order = new Order
+    var totalPrice = products.Sum(p => p.Price);
+
+    var order = new Order
+    {
+        UserId = user.Id,
+        User = user,
+        TotalPrice = totalPrice,
+        OrderDate = DateTime.UtcNow,
+        Status = "Approved",
+        ProductsInOrder = products.Select(p => new ProductOrder
         {
-            UserId = user.Id,
-            User = user,
-            TotalPrice = totalPrice,
-            OrderDate = DateTime.UtcNow,
-            Status = "Approved", // ✅ Force the Status to Approved here
-            ProductsInOrder = products.Select(p => new ProductOrder
-            {
-                ProductId = p.Id,
-                ProductName = p.ProductName,
-                UnitPrice = p.Price,
-                Amount = 1
-            }).ToList()
-        };
+            ProductId = p.Id,
+            ProductName = p.ProductName,
+            UnitPrice = p.Price,
+            Amount = 1 // or take amount from DTO if available
+        }).ToList()
+    };
 
-        await _unitOfWork.Orders.AddAsync(order);
-        await _unitOfWork.CompleteAsync();
+    await _unitOfWork.Orders.AddAsync(order);
+    await _unitOfWork.CompleteAsync();
 
         var emailBody = $"""
 <table style="width: 100%; max-width: 700px; margin: auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; border: 1px solid #e0e0e0; padding: 20px; background-color: #f9f9f9;">
