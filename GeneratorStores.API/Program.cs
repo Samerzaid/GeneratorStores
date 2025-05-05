@@ -38,6 +38,7 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryProductRepository, CategoryProductRepository>(); // Add CategoryProductRepository
 builder.Services.AddScoped<IEmailSender<ApplicationUser>, EmailSender>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddSingleton<ChatGptService>();
 
 
 builder.Services.Configure<PayPalSettings>(

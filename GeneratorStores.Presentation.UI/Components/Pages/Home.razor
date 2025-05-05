@@ -4,6 +4,7 @@
 @inject IProductService ProductService
 @rendermode InteractiveServer
 @inject ICartService CartService
+@inject HttpClient Http
 
 
 <PageTitle>Home</PageTitle>
@@ -267,17 +268,123 @@
     </div>
 </section>
 
+<section class="py-5">
+    <div class="container d-flex justify-content-center">
+        <div class="card shadow-sm p-4 w-100" style="max-width: 700px; background-color: #f9f9f9; border-radius: 20px;">
+            <div class="d-flex align-items-center mb-3">
+                <img src="https://cdn-icons-png.flaticon.com/512/4712/4712103.png" alt="AI" width="40" class="me-2" />
+                <h4 class="fw-bold mb-0">AI Assistant</h4>
+            </div>
+
+            <div class="chat-box p-3 mb-3" style="min-height: 250px; background: #fff; border-radius: 15px; border: 1px solid #eee;">
+                @foreach (var message in chatHistory)
+                {
+                    <div class="d-flex mb-2 @(message.IsUser ? "justify-content-end" : "") align-items-start">
+                        @if (!message.IsUser)
+                        {
+                            <img src="https://cdn-icons-png.flaticon.com/512/4712/4712103.png" width="32" class="me-2 flex-shrink-0" style="height: 32px;" />
+                        }
+
+                        <div class="px-3 py-2 rounded-4 fw-normal"
+                             style="max-width: 75%; background-color: @(message.IsUser ? "#d1e7dd" : "#e4e4e4"); color: #000;">
+                            @message.Text
+                        </div>
+                    </div>
+
+                }
+
+                @if (isTyping)
+                {
+                    <div class="d-flex mb-2">
+                        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712103.png" width="32" class="me-2" />
+                        <div class="px-3 py-2 rounded-4 fst-italic text-muted" style="background-color: #e4e4e4;">
+                            AI is typing...
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="input-group">
+                <input class="form-control" placeholder="Ask me anything..." @bind="question" />
+                <button class="btn btn-primary" @onclick="SendToAI" disabled="@isTyping">Send</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+
 @code {
     private List<DataAccess.Entities.Product> newArrivals;
     private List<DataAccess.Entities.Product> oldArrivals;
+    private string question = string.Empty;
+    private bool isTyping = false;
 
+    private List<ChatMessage> chatHistory = new();
     protected override async Task OnInitializedAsync()
     {
         newArrivals = (await ProductService.GetNewArrivalsAsync(6)).ToList();
         oldArrivals = (await ProductService.GetOldArrivalsAsync(6)).ToList();
 
     }
+  
 
+    private async Task SendToAI()
+    {
+        if (string.IsNullOrWhiteSpace(question)) return;
+
+        chatHistory.Add(new ChatMessage { Text = question, IsUser = true });
+        var currentQuestion = question;
+        question = string.Empty;
+
+        isTyping = true;
+
+        try
+        {
+            var request = new ChatRequest { Question = currentQuestion };
+            var response = await Http.PostAsJsonAsync("http://localhost:5013/api/aichat/ask", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ChatResponse>();
+
+                var aiMessage = new ChatMessage { Text = "", IsUser = false };
+                chatHistory.Add(aiMessage);
+
+                foreach (var ch in result.Answer)
+                {
+                    aiMessage.Text += ch;
+                    StateHasChanged();
+                    await Task.Delay(20); // typing speed
+                }
+            }
+            else
+            {
+                chatHistory.Add(new ChatMessage { Text = "AI failed to respond.", IsUser = false });
+            }
+        }
+        catch (Exception ex)
+        {
+            chatHistory.Add(new ChatMessage { Text = $"Error: {ex.Message}", IsUser = false });
+        }
+
+        isTyping = false;
+    }
+
+    public class ChatMessage
+    {
+        public string Text { get; set; }
+        public bool IsUser { get; set; }
+    }
+
+    public class ChatRequest
+    {
+        public string Question { get; set; }
+    }
+
+    public class ChatResponse
+    {
+        public string Answer { get; set; }
+    }
    
 
     private async Task AddToCart(DataAccess.Entities.Product product)
@@ -348,3 +455,5 @@
     }
 
 </style>
+
+        
