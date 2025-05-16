@@ -11,8 +11,9 @@ public interface IUnitOfWork : IDisposable
     IReviewRepository Reviews { get; } // Add this
     IBannerRepository Banners { get; }
     ICouponRepository Coupons { get; }
-
-
+    IConversationRepository ConversationRepository { get; }
+    IMessageRepository MessageRepository { get; }
+    IUserRepository UserRepository { get; }
     Task<int> CompleteAsync();
 }
 

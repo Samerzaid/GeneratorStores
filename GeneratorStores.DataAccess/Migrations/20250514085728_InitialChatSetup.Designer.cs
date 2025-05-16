@@ -4,6 +4,7 @@ using GeneratorStores.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GeneratorStores.DataAccess.Migrations
 {
     [DbContext(typeof(GeneratorDbContext))]
-    partial class GeneratorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250514085728_InitialChatSetup")]
+    partial class InitialChatSetup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -177,11 +180,16 @@ namespace GeneratorStores.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("CustomerId")
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Conversations");
                 });
@@ -221,12 +229,6 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.Property<int>("ConversationId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("EmailReminderSent")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
                     b.Property<string>("ReceiverId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -235,7 +237,7 @@ namespace GeneratorStores.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("Timestamp")
+                    b.Property<DateTime>("SentAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
@@ -535,6 +537,17 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Conversation", b =>
+                {
+                    b.HasOne("GeneratorStores.DataAccess.Entities.ApplicationUser", "User")
+                        .WithMany("Conversations")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Message", b =>
                 {
                     b.HasOne("GeneratorStores.DataAccess.Entities.Conversation", "Conversation")
@@ -644,6 +657,11 @@ namespace GeneratorStores.DataAccess.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("Conversations");
                 });
 
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Conversation", b =>

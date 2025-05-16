@@ -15,6 +15,9 @@ namespace GeneratorStores.DataAccess
         public DbSet<Review> Reviews { get; set; } // Add Reviews table
         public DbSet<Banner> Banners { get; set; }
         public DbSet<Coupon> Coupons { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Message> Messages { get; set; }
+
 
 
 
@@ -28,6 +31,12 @@ namespace GeneratorStores.DataAccess
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            builder.Entity<Conversation>()
+                .HasMany(c => c.Messages)
+                .WithOne(m => m.Conversation)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Define relationships for Order and ApplicationUser
             builder.Entity<Order>()

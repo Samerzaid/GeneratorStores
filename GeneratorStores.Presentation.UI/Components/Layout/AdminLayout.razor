@@ -34,6 +34,10 @@
                 <NavLink class="nav-item nav-link admin-link" href="/Admin/Reviews">
                     <i class="bi bi-people me-1"></i> Reviews
                 </NavLink>
+                
+                <NavLink class="nav-item nav-link admin-link" href="/Messages">
+                    <i class="bi bi-chat-dots me-1"></i> Messages
+                </NavLink>
 
             </nav>
 
@@ -93,7 +97,7 @@
 
 @code {
     private string? currentUrl;
-
+  
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         currentUrl = NavigationManager.ToBaseRelativePath(e.Location);

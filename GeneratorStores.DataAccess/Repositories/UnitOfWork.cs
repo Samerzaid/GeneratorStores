@@ -16,6 +16,9 @@ public class UnitOfWork : IUnitOfWork
     public IReviewRepository Reviews { get; } // Add this
     public IBannerRepository Banners { get; } // Add this
     public ICouponRepository Coupons { get; } // Add this
+    public IConversationRepository ConversationRepository { get; } // Add this
+    public IMessageRepository MessageRepository { get; } // Add this
+    public IUserRepository UserRepository { get; } // Add this
 
     public UnitOfWork(GeneratorDbContext context)
     {
@@ -28,7 +31,9 @@ public class UnitOfWork : IUnitOfWork
         Reviews = new ReviewRepository(context); // Initialize ReviewRepository
         Banners = new BannerRepository(context);
         Coupons = new CouponRepository(context);
-
+        ConversationRepository = new ConversationRepository(context);
+        MessageRepository = new MessageRepository(context);
+        UserRepository = new UserRepository(context);
     }
 
     public async Task<int> CompleteAsync()

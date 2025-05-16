@@ -4,6 +4,7 @@ using GeneratorStores.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GeneratorStores.DataAccess.Migrations
 {
     [DbContext(typeof(GeneratorDbContext))]
-    partial class GeneratorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250514110818_fixdatabase")]
+    partial class fixdatabase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -165,27 +168,6 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.ToTable("CategoryProducts");
                 });
 
-            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Conversation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdminId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CustomerId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Conversations");
-                });
-
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Coupon", b =>
                 {
                     b.Property<int>("Id")
@@ -204,45 +186,6 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Coupons");
-                });
-
-            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Message", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ConversationId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("EmailReminderSent")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ReceiverId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConversationId");
-
-                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Order", b =>
@@ -535,17 +478,6 @@ namespace GeneratorStores.DataAccess.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Message", b =>
-                {
-                    b.HasOne("GeneratorStores.DataAccess.Entities.Conversation", "Conversation")
-                        .WithMany("Messages")
-                        .HasForeignKey("ConversationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Conversation");
-                });
-
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Order", b =>
                 {
                     b.HasOne("GeneratorStores.DataAccess.Entities.ApplicationUser", "User")
@@ -644,11 +576,6 @@ namespace GeneratorStores.DataAccess.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Conversation", b =>
-                {
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("GeneratorStores.DataAccess.Entities.Order", b =>

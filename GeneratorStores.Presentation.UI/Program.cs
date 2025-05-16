@@ -93,6 +93,14 @@ builder.Services.AddHttpClient<ICheckoutOrderService, CheckoutOrderService>(clie
     client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
 });
 
+builder.Services.AddScoped<IChatService, ChatService>();
+
+
+builder.Services.AddHttpClient<IChatService, ChatService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5013"); // Your backend API URL
+});
+
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 
 

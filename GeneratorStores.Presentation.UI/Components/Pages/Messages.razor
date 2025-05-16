@@ -1,0 +1,432 @@
+﻿@page "/Messages"
+@inject IChatService ChatService
+@inject AuthenticationStateProvider AuthProvider
+@inject IJSRuntime JSRuntime
+@using System.Security.Claims
+@using GeneratorStores.DataAccess.Dtos
+@using GeneratorStores.DataAccess.Services
+@using GeneratorStores.Presentation.UI.Components.Layout
+@rendermode InteractiveServer
+
+<PageTitle>Messages</PageTitle>
+
+<div class="chat-page d-flex">
+
+    <!-- Conversation Sidebar -->
+
+    <div class="chat-sidebar bg-light shadow-sm">
+        <h5 class="p-3 text-center">Conversations</h5>
+
+        <button class="btn btn-primary w-100 mb-2" @onclick="OpenAdminChat">
+            <i class="bi bi-chat-dots me-1"></i> Start Chat with Customer Service
+        </button>
+
+        <ul class="list-group list-group-flush">
+            @foreach (var convo in conversations)
+            {
+                <li class="list-group-item px-3 py-2 @(selectedConversation?.ConversationId == convo.ConversationId ? "active" : "")"
+                    @onclick="() => LoadMessages(convo)">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="fw-bold">
+                            @if (isAdmin && convo.UserId != AdminId)
+                            {
+                                @convo.UserName
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-person-circle me-1"></i>Customer Service</span>
+                            }
+                        </div>
+                        <div class="text-muted small text-nowrap">
+                            @convo.LastTimestamp?.ToLocalTime().ToString("HH:mm")
+                        </div>
+                    </div>
+                    <div class="text-muted small">@convo.LastMessage</div>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window flex-grow-1">
+        @if (selectedConversation != null)
+        {
+            <div class="chat-header shadow-sm d-flex align-items-center p-3">
+                @if (isAdmin && selectedConversation.UserId != AdminId)
+                {
+                    <span><i class="bi bi-chat-dots me-1"></i>Chat with @selectedConversation.UserName</span>
+                }
+                else
+                {
+                    <span><i class="bi bi-chat-dots me-1"></i>Chat with Customer Service</span>
+                }
+            </div>
+
+            <div class="chat-messages p-3" id="chatMessages">
+                @foreach (var msg in messages)
+                {
+                    <div class="chat-bubble @(msg.SenderId == currentUserId ? "mine" : "theirs")">
+                        @msg.Content
+                        <div class="chat-meta">
+                            @msg.Timestamp.ToLocalTime().ToString("HH:mm")
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="chat-input-container d-flex p-2">
+                <input class="form-control rounded-3 me-2" placeholder="Type a message..." @bind="newMessage" @bind:event="oninput" @onkeypress="HandleEnterKey"/>
+                <button class="btn btn-primary rounded-3" @onclick="SendMessage"><i class="bi bi-send"></i></button>
+            </div>
+        }
+        else
+        {
+            <div class="chat-placeholder text-center p-5 text-muted">
+                <i class="bi bi-chat-text fs-1"></i>
+                <p>Select a conversation to start chatting</p>
+            </div>
+        }
+    </div>
+</div>
+
+
+
+@code {
+    private string? currentUserId;
+    private bool isAdmin = false;
+    private List<ConversationDto> conversations = new();
+    private ConversationDto? selectedConversation;
+    private List<MessageDto> messages = new();
+    private string newMessage = "";
+
+    private const string AdminId = "f66f0073-5b5c-4e98-b2b8-29d9b1374c76"; // Admin ID
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        currentUserId = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        isAdmin = currentUserId == AdminId;
+
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            if (isAdmin)
+            {
+                conversations = await ChatService.GetAdminConversationsAsync();
+            }
+            else
+            {
+                conversations = await ChatService.GetCustomerConversationsAsync(currentUserId);
+            }
+        }
+    }
+
+    private async Task OpenAdminChat()
+    {
+        if (string.IsNullOrEmpty(currentUserId))
+            return;
+
+        var adminId = "f66f0073-5b5c-4e98-b2b8-29d9b1374c76";
+
+        // Get or create the conversation
+        var conversation = await ChatService.GetOrCreateConversationAsync(currentUserId, adminId);
+
+        if (conversation != null)
+        {
+            // Set the display name for the admin
+            if (!isAdmin)
+            {
+                conversation.UserName = "Customer Service";
+            }
+
+            // Add the conversation if it doesn't exist
+            if (!conversations.Any(c => c.ConversationId == conversation.ConversationId))
+            {
+                conversations.Add(conversation);
+            }
+
+            // Set this as the active conversation
+            selectedConversation = conversation;
+            await LoadMessages(conversation);
+            await ScrollToBottom();
+        }
+    }
+
+
+
+
+
+
+    private async Task LoadMessages(ConversationDto convo)
+    {
+        selectedConversation = convo;
+
+        // Set the chat name based on the user type
+        if (isAdmin)
+        {
+            selectedConversation.UserName = convo.UserName;
+        }
+        else
+        {
+            selectedConversation.UserName = "Customer Service";
+        }
+
+        messages = await ChatService.GetMessagesByConversationIdAsync(convo.ConversationId, currentUserId!);
+        convo.UnreadCount = 0;
+
+        // Scroll to the bottom of the chat
+        await ScrollToBottom();
+    }
+
+
+    private async Task ScrollToBottom()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight");
+    }
+
+    private async Task SendMessage()
+{
+    if (selectedConversation == null || string.IsNullOrWhiteSpace(newMessage) || currentUserId == null)
+        return;
+
+    // Set the receiver to the admin if the current user is not the admin
+    var receiverId = selectedConversation.UserId == currentUserId 
+        ? "f66f0073-5b5c-4e98-b2b8-29d9b1374c76"  // Admin ID
+        : selectedConversation.UserId;
+
+    var message = new MessageDto
+    {
+        ConversationId = selectedConversation.ConversationId,
+        SenderId = currentUserId,
+        ReceiverId = receiverId,
+        Content = newMessage,
+        Timestamp = DateTime.UtcNow
+    };
+
+    await ChatService.SendMessageAsync(message);
+    messages.Add(message);
+
+    // Update the last message in the conversation list
+    selectedConversation.LastMessage = message.Content;
+    selectedConversation.LastTimestamp = message.Timestamp;
+
+    // Clear the input
+    newMessage = "";
+
+    // Scroll to the bottom of the chat
+    await ScrollToBottom();
+}
+
+
+
+    private async Task HandleEnterKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+}
+
+
+<style>
+    .chat-page {
+        display: flex;
+        height: 100vh;
+        background: linear-gradient(120deg, #f4f4f9, #ffffff 80%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+
+
+    .chat-sidebar {
+        width: 300px;
+        background: #2f3542;
+        color: #f1f3f5;
+        border-right: 1px solid #ddd;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        overflow-y: auto;
+    }
+
+        .chat-sidebar h5 {
+            background-color: #57606f;
+            color: #f1f3f5;
+            margin: 0;
+            padding: 15px;
+            border-bottom: 2px solid #ddd;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .chat-sidebar .list-group-item {
+            background-color: transparent;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            color: black;
+            font-weight: 500;
+        }
+
+            .chat-sidebar .list-group-item:hover {
+                background-color: #57606f;
+                color: #ffffff;
+            }
+
+            .chat-sidebar .list-group-item.active {
+                background-color: #57606f;
+                color: #ffffff;
+                font-weight: bold;
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+            }
+
+    .chat-header {
+        background-color: white;
+        color: black;
+        border-bottom: 2px solid #273c75;
+        padding: 15px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        letter-spacing: 0.5px;
+    }
+
+    .chat-window {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #f4f4f9;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        margin: 20px;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #d0e7f9;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .chat-bubble {
+        padding: 10px 15px;
+        border-radius: 20px;
+        max-width: 60%;
+        word-wrap: break-word;
+        font-size: 0.9rem;
+        position: relative;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+
+        .chat-bubble.mine {
+            background: linear-gradient(135deg, #8e44ad, #3498db);
+            color: #ffffff;
+            align-self: flex-end;
+            text-align: left;
+            border-bottom-right-radius: 0;
+            margin-right: 15px;
+        }
+
+        .chat-bubble.theirs {
+            background: #ffffff;
+            color: #2f3542;
+            align-self: flex-start;
+            text-align: left;
+            border-bottom-left-radius: 0;
+            margin-left: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+
+
+            .chat-bubble.mine:hover,
+            .chat-bubble.theirs:hover {
+                transform: scale(1.02);
+            }
+
+    .chat-meta {
+        font-size: 0.7rem;
+        color: #aaa;
+        margin-top: 4px;
+        text-align: right;
+    }
+
+    .chat-input-container {
+        background-color: #ffffff;
+        border-top: 2px solid #ddd;
+        padding: 0.75rem;
+        position: sticky;
+        bottom: 0;
+        z-index: 999;
+        display: flex;
+        gap: 0.5rem;
+        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 0 0 12px 12px;
+    }
+
+        .chat-input-container input {
+            flex: 1;
+            border-radius: 30px;
+            border: 1px solid #ccc;
+            padding: 10px 15px;
+            transition: border-color 0.2s, background-color 0.3s;
+            color: #2f3542;
+        }
+
+            .chat-input-container input:focus {
+                border-color: #3742fa;
+                outline: none;
+                background-color: #f1f3f5;
+                color: #2f3542;
+                box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+            }
+
+        .chat-input-container button {
+            background-color: #3742fa;
+            border: none;
+            border-radius: 30px;
+            color: #ffffff;
+            padding: 10px 20px;
+            font-weight: bold;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+            .chat-input-container button:hover {
+                background-color: #273c75;
+                box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+            }
+
+    .chat-placeholder {
+        color: #666;
+        font-size: 1.2rem;
+        margin-top: 100px;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background-color: #3742fa;
+        border-color: #3742fa;
+        color: #ffffff;
+    }
+
+        .btn-primary:hover {
+            background-color: #273c75;
+            border-color: #273c75;
+            color: #ffffff;
+        }
+
+    .list-group-item.active {
+        background-color: #3742fa;
+        color: #ffffff;
+    }
+</style>
