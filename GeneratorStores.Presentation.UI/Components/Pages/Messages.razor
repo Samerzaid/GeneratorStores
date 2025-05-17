@@ -17,9 +17,13 @@
     <div class="chat-sidebar bg-light shadow-sm">
         <h5 class="p-3 text-center">Conversations</h5>
 
-        <button class="btn btn-primary w-100 mb-2" @onclick="OpenAdminChat">
-            <i class="bi bi-chat-dots me-1"></i> Start Chat with Customer Service
-        </button>
+        @if (!isAdmin)
+        {
+            <button class="btn btn-primary w-100 mb-2" @onclick="OpenAdminChat">
+                <i class="bi bi-chat-dots me-1"></i> Start Chat with Customer Service
+            </button>
+        }
+
 
         <ul class="list-group list-group-flush">
             @foreach (var convo in conversations)
@@ -112,21 +116,27 @@
         {
             if (isAdmin)
             {
-                conversations = await ChatService.GetAdminConversationsAsync();
+                conversations = (await ChatService.GetAdminConversationsAsync())
+                                .OrderByDescending(c => c.LastTimestamp)
+                                .ToList();
             }
             else
             {
-                conversations = await ChatService.GetCustomerConversationsAsync(currentUserId);
+                conversations = (await ChatService.GetCustomerConversationsAsync(currentUserId))
+                                .OrderByDescending(c => c.LastTimestamp)
+                                .ToList();
             }
         }
     }
+
+
 
     private async Task OpenAdminChat()
     {
         if (string.IsNullOrEmpty(currentUserId))
             return;
 
-        var adminId = "f66f0073-5b5c-4e98-b2b8-29d9b1374c76";
+        var adminId = AdminId;
 
         // Get or create the conversation
         var conversation = await ChatService.GetOrCreateConversationAsync(currentUserId, adminId);
@@ -145,17 +155,18 @@
                 conversations.Add(conversation);
             }
 
+            // Move the conversation to the top
+            conversations = conversations.OrderByDescending(c => c.LastTimestamp).ToList();
+
             // Set this as the active conversation
             selectedConversation = conversation;
             await LoadMessages(conversation);
             await ScrollToBottom();
+
+            // Refresh the UI
+            StateHasChanged();
         }
     }
-
-
-
-
-
 
     private async Task LoadMessages(ConversationDto convo)
     {
@@ -176,8 +187,10 @@
 
         // Scroll to the bottom of the chat
         await ScrollToBottom();
-    }
 
+        // Refresh the UI
+        StateHasChanged();
+    }
 
     private async Task ScrollToBottom()
     {
@@ -185,39 +198,43 @@
     }
 
     private async Task SendMessage()
-{
-    if (selectedConversation == null || string.IsNullOrWhiteSpace(newMessage) || currentUserId == null)
-        return;
-
-    // Set the receiver to the admin if the current user is not the admin
-    var receiverId = selectedConversation.UserId == currentUserId 
-        ? "f66f0073-5b5c-4e98-b2b8-29d9b1374c76"  // Admin ID
-        : selectedConversation.UserId;
-
-    var message = new MessageDto
     {
-        ConversationId = selectedConversation.ConversationId,
-        SenderId = currentUserId,
-        ReceiverId = receiverId,
-        Content = newMessage,
-        Timestamp = DateTime.UtcNow
-    };
+        if (selectedConversation == null || string.IsNullOrWhiteSpace(newMessage) || currentUserId == null)
+            return;
 
-    await ChatService.SendMessageAsync(message);
-    messages.Add(message);
+        // Set the receiver to the admin if the current user is not the admin
+        var receiverId = selectedConversation.UserId == currentUserId
+            ? AdminId  // Admin ID
+            : selectedConversation.UserId;
 
-    // Update the last message in the conversation list
-    selectedConversation.LastMessage = message.Content;
-    selectedConversation.LastTimestamp = message.Timestamp;
+        var message = new MessageDto
+            {
+                ConversationId = selectedConversation.ConversationId,
+                SenderId = currentUserId,
+                ReceiverId = receiverId,
+                Content = newMessage,
+                Timestamp = DateTime.UtcNow
+            };
 
-    // Clear the input
-    newMessage = "";
+        await ChatService.SendMessageAsync(message);
+        messages.Add(message);
 
-    // Scroll to the bottom of the chat
-    await ScrollToBottom();
-}
+        // Update the last message and timestamp
+        selectedConversation.LastMessage = message.Content;
+        selectedConversation.LastTimestamp = message.Timestamp;
 
+        // Move the updated conversation to the top
+        conversations = conversations.OrderByDescending(c => c.LastTimestamp).ToList();
 
+        // Clear the input
+        newMessage = "";
+
+        // Scroll to the bottom of the chat
+        await ScrollToBottom();
+
+        // Refresh the UI
+        StateHasChanged();
+    }
 
     private async Task HandleEnterKey(KeyboardEventArgs e)
     {
@@ -226,8 +243,9 @@
             await SendMessage();
         }
     }
-
 }
+
+
 
 
 <style>
