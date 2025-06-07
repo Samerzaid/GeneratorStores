@@ -11,7 +11,7 @@ WORKDIR /src
 
 COPY GeneratorStores.Presentation.UI/GeneratorStores.Presentation.UI.csproj GeneratorStores.Presentation.UI/
 COPY GeneratorStores.API/GeneratorStores.API.csproj GeneratorStores.API/
-COPY GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj 
+COPY GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj GeneratorStores.DataAccess/
 
 
 RUN dotnet restore GeneratorStores.API/GeneratorStores.API.csproj
