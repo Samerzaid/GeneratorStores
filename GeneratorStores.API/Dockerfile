@@ -10,9 +10,10 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy csproj files
-COPY GeneratorStores.Presentation.UI/GeneratorStores.Presentation.UI.csproj ./GeneratorStores.Presentation.UI/
-COPY GeneratorStores.API/GeneratorStores.API.csproj ./GeneratorStores.API/
-COPY GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj ./GeneratorStores.DataAccess/
+COPY ./GeneratorStores.Presentation.UI/GeneratorStores.Presentation.UI.csproj ./GeneratorStores.Presentation.UI/
+COPY ./GeneratorStores.API/GeneratorStores.API.csproj ./GeneratorStores.API/
+COPY ./GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj ./GeneratorStores.DataAccess/
+
 
 # Restore
 RUN dotnet restore ./GeneratorStores.API/GeneratorStores.API.csproj
