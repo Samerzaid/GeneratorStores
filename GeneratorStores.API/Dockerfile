@@ -9,9 +9,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-COPY GeneratorStores.Presentation.UI/GeneratorStores.Presentation.UI.csproj
-COPY GeneratorStores.API/GeneratorStores.API.csproj
-COPY GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj 
+COPY GeneratorStores.Presentation.UI/GeneratorStores.Presentation.UI.csproj GeneratorStores.Presentation.UI/
+COPY GeneratorStores.API/GeneratorStores.API.csproj GeneratorStores.API/
+COPY GeneratorStores.DataAccess/GeneratorStores.DataAccess.csproj GeneratorStores.DataAccess/
 
 
 RUN dotnet restore GeneratorStores.API/GeneratorStores.API.csproj
