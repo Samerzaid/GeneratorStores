@@ -156,7 +156,7 @@ public async Task<IActionResult> CreateOrderFromDto([FromBody] CreateOrderDto cr
     <tr>
         <td style="text-align: center; padding-top: 30px;">
             <p style="font-size: 15px; color: #777;">If you have any questions, reply to this email.</p>
-            <p style="font-size: 15px; color: #777;">Thank you for shopping with <strong>Zalando-Phones</strong>!</p>
+            <p style="font-size: 15px; color: #777;">Thank you for shopping with <strong>OnlineShop</strong>!</p>
         </td>
     </tr>
 </table>
@@ -166,7 +166,7 @@ public async Task<IActionResult> CreateOrderFromDto([FromBody] CreateOrderDto cr
 
         await _emailService.SendEmailAsync(
             to: user.Email,
-            subject: "🛒 Order Confirmation - Zalando-Phones",
+            subject: "🛒 Order Confirmation - OnlineShop",
             body: emailBody
         );
 
